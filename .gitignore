@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Virtualenv
+.venv/
+venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# OS / editor
+.DS_Store
+
+# Local agent settings
+.claude/
