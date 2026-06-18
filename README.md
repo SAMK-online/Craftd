@@ -1,189 +1,66 @@
-# Event Intel - Backend
+# Craft'ed
 
-Turn a name + company (or business card photo) into a full intelligence brief with personalized outreach drafts and open job matches, in ~15-20 seconds.
+**Turn every conversation into a warm, researched follow-up — in under 20 seconds.**
 
-## Stack
+You meet someone great at a conference, a career fair, a meetup. You exchange a few words, maybe a business card. Then life happens. By the time you sit down to follow up, the context is gone, the energy has faded, and the message you send is generic — if you send one at all.
 
-- **FastAPI** + **uvicorn** - async API server
-- **Anthropic Claude** - business card OCR (Vision) + report generation
-- **Clay** - person and company enrichment (LinkedIn, funding, tech stack, email)
-- **Greenhouse / Lever / Ashby APIs** - job board scanning (no auth required)
-- **Apify** - fallback LinkedIn Jobs scraper (optional)
-- **Pydantic** - typed data contracts throughout the pipeline
+The window between meeting someone and following up is where most opportunities die. **Craft'ed closes that window before you leave the room.**
 
 ---
 
-## Setup
+## How it works
 
-### 1. Install dependencies
+Snap a business card or type a name and company. Craft'ed does the rest:
 
-**Requires Python 3.10+** (the API uses `X | None` runtime type annotations that
-FastAPI evaluates at startup; 3.9 will fail to boot).
+**1. Identify**
+Reads the business card instantly, or takes a name and company you type in. No manual data entry.
 
-```bash
-cd event_intel
-python3.11 -m venv .venv          # any 3.10+ interpreter works
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
+**2. Research**
+Enriches the contact with real professional context — role, background, career history — and scans their company's job board for openings that actually fit your profile.
 
-### 2. Configure environment
+**3. Craft**
+Generates a ready-to-send follow-up package: a personalized LinkedIn DM, a warm follow-up email, and a one-glance intel brief on the person and their company.
 
-```bash
-cp .env.example .env
-```
-
-Open `.env` and fill in:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-CLAY_API_KEY=clay_...
-CLAY_TABLE_WEBHOOK_URL=https://api.clay.com/v3/sources/webhook/...
-```
-
-### 3. Clay setup (critical for enrichment)
-
-1. Create a Clay table with these columns: `name`, `company`, `title`, `email`, `linkedin_url`
-2. Add enrichment integrations:
-   - **People Data Labs** (person: LinkedIn, skills, career history)
-   - **Clearbit** or **Apollo** (company: funding, tech stack, headcount)
-3. Add a **Webhook source** to the table (Settings > Sources > Webhook)
-4. Copy the webhook URL to `CLAY_TABLE_WEBHOOK_URL`
-5. Copy your table ID from the URL: `app.clay.com/.../tables/TABLE_ID_HERE`
-6. Add to `.env`: `CLAY_TABLE_ID=TABLE_ID_HERE`
-
-Clay column names in the enrichment response will vary based on your integrations.
-Open `app/services/clay_service.py` and adjust the field mapping in `_map_clay_row_to_enrichment()`
-to match your actual Clay column IDs.
-
-### 4. Apify setup (optional, for companies not on Greenhouse/Lever/Ashby)
-
-1. Create an account at apify.com
-2. Copy your API token to `APIFY_API_TOKEN`
-3. The scraper used is `bebity/linkedin-jobs-scraper` (free tier is enough for a pilot)
-
-### 5. Run the server
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-API docs at: http://localhost:8000/docs
+Everything is researched, personalized, and ready to send before you've even left the venue.
 
 ---
 
-## API Endpoints
+## What you get for every contact
 
-### `POST /api/generate`
-Full pipeline. Returns complete report JSON.
+- **Personalized LinkedIn DM** — short, human, references where you met. First-message ready.
+- **Follow-up email** — warm and specific, with a clear ask and the right context built in.
+- **Intel brief** — who they are, what their company does, where it's headed, and the single best reason to reach out.
+- **Matched opportunities** — open roles at their company that fit your background, surfaced automatically with a one-line "why this fits."
+- **Talking points** — natural conversation starters for when you reconnect.
 
-```bash
-# With name + company (typed)
-curl -X POST http://localhost:8000/api/generate \
-  -F "name=Sarah Chen" \
-  -F "company=Anthropic" \
-  -F "event_name=AWS Summit 2025"
-
-# With a business card photo
-curl -X POST http://localhost:8000/api/generate \
-  -F "card_image=@/path/to/card.jpg" \
-  -F "event_name=AWS Summit 2025"
-```
-
-### `POST /api/generate/stream`
-Same pipeline but streams stage updates via Server-Sent Events.
-Use this for the mobile UI - users see progress as it happens.
-
-Events emitted: `pipeline_start`, `stage_start`, `stage_complete`, `stage_warning`, `stage_error`, `done`, `error`
-
-### `POST /api/ocr`
-Parse a business card only. Good for testing card quality.
-
-```bash
-curl -X POST http://localhost:8000/api/ocr \
-  -F "card_image=@/path/to/card.jpg"
-```
-
-### `POST /api/jobs`
-Search for target roles at a company.
-
-```bash
-curl -X POST http://localhost:8000/api/jobs \
-  -F "company=Databricks"
-```
+No templates. No generic "great to meet you" filler. Every message is built from real research on the specific person in front of you.
 
 ---
 
-## Pipeline Architecture
+## Who it's for
 
-```
-Input (name+company or card image)
-    │
-    ▼ [OCR - Claude Vision, ~2s, only if card image]
-Resolved contact: name, company, title
-    │
-    ├─────────────────────────────┐
-    ▼                             ▼
-Clay enrichment (~4-8s)      Job board scan (~3-6s)
-Person + company data        Greenhouse/Lever/Ashby APIs
-    │                             │
-    └──────────┬──────────────────┘
-               ▼ [asyncio.gather - runs both in parallel]
-        Enriched context
-               │
-               ▼ [Claude report generation, ~4s]
-          IntelReport
-               │
-    ┌──────────┼──────────┐
-    ▼          ▼          ▼
-LinkedIn DM  Email    Talking points
-```
+**At events.** Conferences, career fairs, meetups, summits — anywhere you meet more people than you can possibly follow up with by hand.
 
-Total: ~15-20s with Clay, ~8-12s without.
+**For your career.** Land in front of the right recruiters and hiring managers with a message that proves you did the homework — and a role at their company already matched to your profile.
+
+**For sales teams.** Every booth conversation, every badge scan, every handshake becomes a qualified, researched pipeline entry instead of a name you'll never get back to. Turn event touchpoints into real opportunities at scale.
 
 ---
 
-## Project Structure
+## Why it works
 
-```
-event_intel/
-├── app/
-│   ├── main.py              # FastAPI app, CORS, router registration
-│   ├── config.py            # Pydantic settings (reads .env)
-│   ├── models/
-│   │   └── pipeline.py      # All typed Pydantic models
-│   ├── services/
-│   │   ├── ocr_service.py   # Claude Vision business card parsing
-│   │   ├── clay_service.py  # Clay enrichment (webhook + polling)
-│   │   ├── jobs_service.py  # Greenhouse/Lever/Ashby/Apify job search
-│   │   ├── report_service.py # Claude report + outreach generation
-│   │   └── pipeline.py      # Orchestrator: coordinates all stages
-│   └── api/
-│       └── routes.py        # FastAPI endpoints
-├── requirements.txt
-├── .env.example
-└── README.md
-```
+Follow-ups fail for one reason: the gap between meeting someone and reaching out is too long, and by the time you act, the personalization isn't worth the effort. Craft'ed collapses that gap to seconds and removes the effort entirely — so the warm, specific, researched follow-up becomes the easy default, not the thing you mean to do and never get to.
+
+The result: more replies, warmer conversations, and a follow-up game that actually scales with how many people you meet.
 
 ---
 
-## Deployment (Render.com - easiest for a pilot)
+## Roadmap
 
-1. Push to GitHub
-2. Create a new Web Service on render.com
-3. Build command: `pip install -r requirements.txt`
-4. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Add environment variables from your `.env`
-
-The free tier spins down after inactivity. Upgrade to Starter ($7/mo) for the event to avoid cold starts.
+- **Event mode** — built first for conferences and career fairs.
+- **Career fair mode** — outreach framed candidate-to-employer, tuned to your target roles.
+- **Sales platform** — team workspaces, CRM sync, and batch processing to convert every event touchpoint into pipeline.
 
 ---
 
-## Extending for Career Fairs / Sales Teams
-
-The pipeline is designed to extend:
-
-- **Career fair mode**: add `context: "career_fair"` to `ContactInput` and adjust the report prompt in `report_service.py` to frame outreach as candidate-to-employer
-- **Sales team mode**: replace Abu's background in the system prompt with a company/product description, add CRM sync as a post-pipeline step
-- **History/logging**: add a SQLite or Postgres layer to persist `PipelineState` per session
-- **Batch mode**: wrap `run_pipeline()` in a list comprehension with `asyncio.gather()` for post-event batch processing of all contacts
+*Craft'ed — meet someone, follow up before you leave the room.*
