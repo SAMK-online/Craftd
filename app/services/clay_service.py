@@ -132,14 +132,26 @@ async def _post_to_clay_webhook(
     webhook_url: str,
     payload: dict,
 ) -> str:
-    """POST contact to Clay table webhook. Returns the row_id Clay assigns."""
+    """POST contact to Clay table webhook. Returns the row_id Clay assigns, if any.
+
+    Clay's "import from webhook" source ingests the row asynchronously and does
+    not reliably return a JSON body or a row_id. A non-JSON / id-less response is
+    therefore treated as a successful fire-and-forget ingest: we return "" so the
+    caller falls back to webhook-only (minimal) enrichment instead of crashing.
+    """
     resp = await client.post(webhook_url, json=payload, timeout=10.0)
     resp.raise_for_status()
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError:
+        logger.info("Clay webhook accepted payload (non-JSON response); webhook-only mode")
+        return ""
+    if not isinstance(data, dict):
+        return ""
     # Clay webhooks return {"row_id": "..."} or similar - adjust to your table
     row_id = data.get("row_id") or data.get("id") or data.get("rowId")
     if not row_id:
-        logger.warning("Clay webhook response missing row_id: %s", data)
+        logger.info("Clay webhook response has no row_id; webhook-only mode")
     return str(row_id) if row_id else ""
 
 
