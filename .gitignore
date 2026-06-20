@@ -19,3 +19,4 @@ __pycache__/
 # Test artifacts
 .playwright-mcp/
 craftd-*.png
+redesign-*.png

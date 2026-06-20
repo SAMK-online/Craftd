@@ -41,17 +41,20 @@ export function CaptureForm({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="animate-fade-up space-y-5">
       {/* Mode toggle */}
-      <div className="flex rounded-xl bg-zinc-900 p-1">
+      <div className="glass relative flex rounded-2xl p-1">
+        <span
+          className="accent-gradient absolute inset-y-1 w-[calc(50%-0.25rem)] rounded-xl transition-transform duration-300 ease-out"
+          style={{ transform: mode === "card" ? "translateX(0)" : "translateX(100%)" }}
+          aria-hidden
+        />
         {(["card", "type"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
-              mode === m
-                ? "bg-violet-600 text-white shadow"
-                : "text-zinc-400 hover:text-zinc-200"
+            className={`relative z-10 flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+              mode === m ? "text-white" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             {m === "card" ? "Snap a card" : "Type it in"}
@@ -60,7 +63,7 @@ export function CaptureForm({
       </div>
 
       {mode === "card" ? (
-        <div>
+        <div className="animate-fade-up">
           <input
             ref={fileRef}
             type="file"
@@ -71,65 +74,60 @@ export function CaptureForm({
           />
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/50 px-4 py-10 text-zinc-400 transition hover:border-violet-500 hover:text-zinc-200"
+            className="group glass flex w-full flex-col items-center justify-center gap-3 rounded-3xl px-4 py-12 text-zinc-400 transition hover:border-violet-500/40 hover:text-zinc-200"
           >
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={preview}
                 alt="Business card"
-                className="max-h-48 rounded-lg object-contain"
+                className="ring-glow max-h-52 rounded-xl object-contain"
               />
             ) : (
               <>
-                <span className="text-4xl">📇</span>
-                <span className="text-sm font-medium">
-                  Tap to snap or upload a business card
+                <span className="accent-gradient flex h-14 w-14 items-center justify-center rounded-2xl text-white transition-transform group-hover:scale-105">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+                    <circle cx="8" cy="11" r="2" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M13 10h5M13 14h5M5 16h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
                 </span>
-                <span className="text-xs text-zinc-500">
-                  Uses your camera on mobile
+                <span className="text-sm font-medium text-zinc-200">
+                  Tap to snap or upload a card
                 </span>
+                <span className="text-xs text-zinc-500">Uses your camera on mobile</span>
               </>
             )}
           </button>
           {preview && (
             <button
               onClick={() => handleFile(null)}
-              className="mt-2 text-xs text-zinc-500 underline hover:text-zinc-300"
+              className="mt-3 text-xs text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
             >
               Remove image
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
-          <Field label="Name *" value={name} onChange={setName} placeholder="Sarah Chen" />
-          <Field
-            label="Company *"
-            value={company}
-            onChange={setCompany}
-            placeholder="Anthropic"
-          />
-          <Field
-            label="Title"
-            value={title}
-            onChange={setTitle}
-            placeholder="Solutions Engineer"
-          />
+        <div className="animate-fade-up space-y-3">
+          <Field label="Name" required value={name} onChange={setName} placeholder="Sarah Chen" />
+          <Field label="Company" required value={company} onChange={setCompany} placeholder="Anthropic" />
+          <Field label="Title" value={title} onChange={setTitle} placeholder="Solutions Engineer" />
         </div>
       )}
 
       <Field
-        label="Event (optional)"
+        label="Event"
         value={eventName}
         onChange={setEventName}
         placeholder="AWS Summit 2025"
+        hint="optional"
       />
 
       <button
         onClick={submit}
         disabled={!canSubmit || disabled}
-        className="w-full rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+        className="accent-gradient ring-glow w-full rounded-2xl px-4 py-3.5 text-base font-semibold text-white transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
       >
         {disabled ? "Working…" : "Craft follow-up"}
       </button>
@@ -142,20 +140,28 @@ function Field({
   value,
   onChange,
   placeholder,
+  required,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  required?: boolean;
+  hint?: string;
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-zinc-400">{label}</span>
+      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+        {label}
+        {required && <span className="text-violet-400">*</span>}
+        {hint && <span className="text-zinc-600">· {hint}</span>}
+      </span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-violet-500"
+        className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-violet-500/60 focus:bg-white/[0.05] focus:ring-2 focus:ring-violet-500/20"
       />
     </label>
   );
