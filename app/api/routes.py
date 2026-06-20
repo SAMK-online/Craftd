@@ -21,7 +21,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.models.pipeline import ContactInput, IntelReport, JobBoardResult, ParsedCard
-from app.services.clay_service import enrich_contact
+from app.services.research_service import enrich_contact
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card
 from app.services.pipeline import run_pipeline

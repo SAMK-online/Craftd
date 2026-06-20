@@ -44,7 +44,7 @@ class ParsedCard(BaseModel):
     raw_text: str = Field(description="Full OCR text for debugging")
 
 
-# ─── Clay Enrichment Stage ────────────────────────────────────────────────────
+# ─── Enrichment Stage (live web research) ─────────────────────────────────────
 
 class FundingStage(str, Enum):
     BOOTSTRAPPED = "bootstrapped"
@@ -58,7 +58,7 @@ class FundingStage(str, Enum):
 
 
 class CompanyEnrichment(BaseModel):
-    """Company-level enrichment from Clay."""
+    """Company-level enrichment from web research."""
     name: str
     description: Optional[str] = None
     industry: Optional[str] = None
@@ -75,7 +75,7 @@ class CompanyEnrichment(BaseModel):
 
 
 class PersonEnrichment(BaseModel):
-    """Person-level enrichment from Clay."""
+    """Person-level enrichment from web research."""
     full_name: str
     title: Optional[str] = None
     company: Optional[str] = None
@@ -89,15 +89,15 @@ class PersonEnrichment(BaseModel):
 
 
 class EnrichmentResult(BaseModel):
-    """Combined enrichment output from Clay."""
+    """Combined enrichment output from web research."""
     person: PersonEnrichment
     company: CompanyEnrichment
     enrichment_confidence: float = Field(
         ge=0.0, le=1.0,
         description="0.0–1.0 confidence score based on data completeness"
     )
-    raw_clay_response: Optional[dict] = Field(
-        None, description="Full Clay API response for debugging"
+    raw_enrichment: Optional[dict] = Field(
+        None, description="Raw research payload for debugging"
     )
 
 
@@ -171,7 +171,7 @@ class IntelReport(BaseModel):
     outreach: OutreachDraft
 
     enrichment_used: bool = Field(
-        description="Whether Clay enrichment succeeded or we fell back to public data"
+        description="Whether web-research enrichment succeeded or we fell back to public data"
     )
 
 

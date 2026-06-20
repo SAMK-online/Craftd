@@ -1,1 +1,1 @@
-"""Pipeline stage services (OCR, Clay, jobs, report) and the orchestrator."""
+"""Pipeline stage services (OCR, research, jobs, report) and the orchestrator."""

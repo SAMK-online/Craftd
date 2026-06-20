@@ -3,7 +3,7 @@ Pipeline Orchestrator.
 
 Coordinates all stages:
 1. OCR (if card image provided)         [sequential - needed before enrichment]
-2. Clay enrichment + Job scan           [parallel with asyncio.gather]
+2. Web-research enrichment + Job scan   [parallel with asyncio.gather]
 3. Report generation                    [sequential - needs both above]
 
 Returns a fully populated PipelineState.
@@ -15,7 +15,7 @@ import logging
 import time
 
 from app.models.pipeline import ContactInput, PipelineState
-from app.services.clay_service import enrich_contact
+from app.services.research_service import enrich_contact
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card, resolve_contact_info
 from app.services.report_service import generate_report

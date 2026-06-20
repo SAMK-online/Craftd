@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Craft'ed" [level=1] [ref=e4]
+      - paragraph [ref=e5]: Meet someone → a warm, researched follow-up before you leave the room.
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - heading "Alex Rivera" [level=2] [ref=e50]
+          - paragraph [ref=e51]: Solutions Architect · Databricks
+        - generic [ref=e52]: Public data
+      - generic [ref=e53]:
+        - heading "Who they are" [level=3] [ref=e55]
+        - paragraph [ref=e56]: Alex Rivera is a Solutions Architect at Databricks, likely working at the intersection of data platform architecture and customer-facing technical delivery. Solutions Architects at Databricks typically bridge complex data engineering and AI workloads with real-world enterprise implementation, making Alex well-positioned in the MLOps and lakehouse ecosystem. Enrichment data is limited, so Abu should treat this connection as an early-stage relationship to invest in rather than immediately leverage.
+      - generic [ref=e57]:
+        - heading "Company" [level=3] [ref=e59]
+        - paragraph [ref=e60]: Databricks is the leading data and AI company behind the open lakehouse architecture, powering Delta Lake, MLflow, and Unity Catalog across thousands of enterprises. The company recently surpassed a $62B valuation following a major funding round and is aggressively expanding its AI engineering and Forward Deployed Engineering teams globally. Their recent push into agentic AI workflows and LLM-native data pipelines signals strong alignment with Abu's technical focus.
+      - generic [ref=e61]:
+        - heading "Why follow up" [level=3] [ref=e63]
+        - paragraph [ref=e64]: Alex sits inside the exact organization that posted an AI FDE role — and as a Solutions Architect, he likely works alongside or feeds into that FDE team daily, making him a meaningful internal signal-holder rather than just a passive connection.
+      - generic [ref=e65]:
+        - heading "Open roles (1)" [level=3] [ref=e67]
+        - link "AI Engineer - FDE (Forward Deployed Engineer) Greenhouse Remote - South Korea FDE role at Databricks aligns with Abu's hands-on AI deployment work at Actfore and hackathon wins." [ref=e69] [cursor=pointer]:
+          - /url: https://databricks.com/company/careers/open-positions/job?gh_jid=8574655002
+          - generic [ref=e70]:
+            - generic [ref=e71]: AI Engineer - FDE (Forward Deployed Engineer)
+            - generic [ref=e72]: Greenhouse
+          - paragraph [ref=e73]: Remote - South Korea
+          - paragraph [ref=e74]: FDE role at Databricks aligns with Abu's hands-on AI deployment work at Actfore and hackathon wins.
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - heading "LinkedIn DM" [level=3] [ref=e77]
+          - button "Copy" [ref=e78] [cursor=pointer]
+        - paragraph [ref=e79]: Hey Alex — great connecting at Data + AI Summit! Your work at Databricks caught my attention. I'm deep in agentic pipelines and FDE-style AI deployment. Would love to stay in touch and compare notes sometime.
+        - paragraph [ref=e80]: 208 chars
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - heading "Follow-up email" [level=3] [ref=e83]
+          - button "Copy" [ref=e84] [cursor=pointer]
+        - generic [ref=e85]:
+          - paragraph [ref=e86]: "Subject: Great meeting at Data + AI Summit — AI FDE work + a quick question"
+          - paragraph [ref=e87]: Hey Alex, Really glad we crossed paths at Data + AI Summit 2025. The conversations happening around agentic AI and real-world deployment were exactly the kind of signal I'm tracking closely right now. I'm a Data Engineer and AI systems builder — currently at Actfore building automated PHI/PII extraction pipelines, and founder of Saasyfy, an AI-native B2B SaaS marketplace accepted into NVIDIA's Inception Program. Most of my recent work lives in LangGraph, multi-agent orchestration, and production AI deployments (one of my projects, MindBridge, won the NVIDIA Agents for Impact Hackathon). I came across Databricks' AI Forward Deployed Engineer opening and it genuinely maps to how I think about the work — hands-on with customers, deep in the stack, owning outcomes not just architecture. Given your vantage point as a Solutions Architect, I'd love to hear how you think about that kind of role from the inside, even just for 15 minutes. No pressure at all — happy to share more about what I've been building if it's useful context. Either way, would love to stay connected. Best, Abu abdul@saasyfy.com
+      - generic [ref=e88]:
+        - heading "Talking points" [level=3] [ref=e90]
+        - list [ref=e91]:
+          - listitem [ref=e92]:
+            - generic [ref=e93]: •
+            - generic [ref=e94]: Ask Alex what the collaboration looks like between Solutions Architects and the FDE team at Databricks day-to-day — it signals Abu understands org structure and opens a natural door to the role.
+          - listitem [ref=e95]:
+            - generic [ref=e96]: •
+            - generic [ref=e97]: Mention MindBridge's multi-agent architecture and how it required deterministic routing on top of LLM reasoning — this is a real technical conversation starter that maps to Databricks' current agentic AI push.
+          - listitem [ref=e98]:
+            - generic [ref=e99]: •
+            - generic [ref=e100]: Ask Alex what customer pain points he sees most often on the data and AI side — Abu has production pipeline experience at Actfore that could make this a genuine two-way exchange, not just a pitch.
+      - button "New contact" [ref=e101] [cursor=pointer]
+    - generic [ref=e20]: Powered by Claude · Clay · live job boards
+  - alert [ref=e21]

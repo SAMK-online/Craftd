@@ -9,11 +9,9 @@ Every attribute and property defined here is consumed somewhere in the
 service layer:
 
   anthropic_api_key        -> ocr_service, report_service (Claude client)
-  clay_api_key             -> clay_service (poll auth: Bearer token)
-  clay_table_webhook_url   -> clay_service (enrichment trigger)
-  clay_table_id            -> clay_service (row polling path)
-  clay_timeout_seconds     -> clay_service (poll deadline)
-  clay_configured          -> clay_service (skip enrichment if False)
+  tavily_api_key           -> research_service (live web research)
+  tavily_max_results       -> research_service (results per query)
+  tavily_configured        -> research_service (skip enrichment if False)
   apify_api_token          -> jobs_service (fallback scraper auth)
   apify_configured         -> jobs_service (skip Apify fallback if False)
   linkedin_scrape_enabled  -> reserved for the direct-LinkedIn path
@@ -52,27 +50,20 @@ class Settings(BaseSettings):
     # for unit tests and `/api/health`); enforced lazily via `require_anthropic`.
     anthropic_api_key: str = Field(default="", description="Claude API key (sk-ant-...)")
 
-    # ── Clay enrichment (optional; pipeline degrades gracefully without it) ────
-    clay_api_key: str = Field(default="", description="Clay API key for row polling")
-    clay_table_webhook_url: str = Field(
-        default="", description="Clay table webhook URL that triggers an enrichment row"
-    )
-    clay_table_id: str = Field(
-        default="", description="Clay table ID, used to poll the enriched row"
-    )
-    clay_timeout_seconds: int = Field(
-        default=12,
-        ge=1,
-        le=60,
-        description="Max seconds to wait for Clay enrichment before falling back",
-    )
-
     # ── Job board fallback (optional) ─────────────────────────────────────────
     apify_api_token: str = Field(
         default="", description="Apify token for the LinkedIn Jobs scraper fallback"
     )
     linkedin_scrape_enabled: bool = Field(
         default=False, description="Enable the direct-LinkedIn scrape path (needs cookies)"
+    )
+
+    # ── Enrichment via live web research (Tavily) ─────────────────────────────
+    tavily_api_key: str = Field(
+        default="", description="Tavily search API key for live person/company research"
+    )
+    tavily_max_results: int = Field(
+        default=5, ge=1, le=10, description="Results per Tavily query"
     )
 
     # ── App runtime ───────────────────────────────────────────────────────────
@@ -84,19 +75,19 @@ class Settings(BaseSettings):
     # ── Derived gates the services branch on ──────────────────────────────────
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def clay_configured(self) -> bool:
-        """True only when enrichment can actually be triggered.
-
-        clay_service skips enrichment entirely (returns None) when this is
-        False, so both the trigger URL and the poll key must be present.
-        """
-        return bool(self.clay_api_key and self.clay_table_webhook_url)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
     def apify_configured(self) -> bool:
         """True when the Apify fallback scraper can be called."""
         return bool(self.apify_api_token)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def tavily_configured(self) -> bool:
+        """True when live web-research enrichment can run.
+
+        research_service skips enrichment (returns None) when this is False, so
+        the pipeline degrades cleanly to public data + job boards.
+        """
+        return bool(self.tavily_api_key)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -131,13 +122,10 @@ def get_settings() -> Settings:
         logger.warning(
             "ANTHROPIC_API_KEY not set - OCR and report generation will fail until configured."
         )
-    if not settings.clay_configured:
+    if not settings.tavily_configured:
         logger.info(
-            "Clay not configured - enrichment will be skipped (set CLAY_API_KEY + CLAY_TABLE_WEBHOOK_URL)."
-        )
-    if settings.clay_configured and not settings.clay_table_id:
-        logger.info(
-            "CLAY_TABLE_ID not set - Clay will run in webhook-only mode (no row polling)."
+            "Tavily not configured - enrichment will be skipped (set TAVILY_API_KEY). "
+            "Briefs still generate from public data + job boards."
         )
     if not settings.apify_configured:
         logger.debug("Apify not configured - job search will use ATS APIs only.")

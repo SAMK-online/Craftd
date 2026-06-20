@@ -177,7 +177,7 @@ export default function Home() {
       </div>
 
       <footer className="mt-8 text-center text-[10px] text-zinc-700">
-        Powered by Claude · Clay · live job boards
+        Powered by Claude · live web research · job boards
       </footer>
     </main>
   );
