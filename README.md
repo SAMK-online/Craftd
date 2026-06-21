@@ -1,66 +1,146 @@
 # Craft'ed
 
-**Turn every conversation into a warm, researched follow-up — in under 20 seconds.**
+**Meet someone at an event → a warm, researched follow-up before you leave the room.**
 
-You meet someone great at a conference, a career fair, a meetup. You exchange a few words, maybe a business card. Then life happens. By the time you sit down to follow up, the context is gone, the energy has faded, and the message you send is generic — if you send one at all.
+Craft'ed is a self-hosted networking tool. At an event you drop a name + company (or snap a business card), and it runs in the background to produce a researched intel brief — who they are, their company, why to follow up, open roles that fit *you*, a verified email, and ready-to-send LinkedIn DM + follow-up email. Briefs land on a dashboard so you can capture the next person without waiting.
 
-The window between meeting someone and following up is where most opportunities die. **Craft'ed closes that window before you leave the room.**
+It's **bring-your-own-keys**: clone it, drop in your API keys, run it locally. Everything degrades gracefully — the only key you truly need is Anthropic.
+
+---
+
+## Features
+
+- **Event dashboard** — drop a name + company, it queues and processes in the background; briefs populate as they finish
+- **Persona-driven** — onboard once (name, goal, resume); every brief, DM, and job match is tailored to *you* (internship / full-time / collaboration / mentorship)
+- **Live research** — person + company researched from the web (Tavily), not a stale database
+- **Find people** — search "Solutions Engineers at Anthropic" or "speakers at AWS Summit" → discover contacts, then craft a follow-up
+- **Job matching** — scans the contact's company (Greenhouse/Lever/Ashby) for roles that fit your resume, with description briefs + apply links
+- **Verified emails** — finds a deliverable work email (Prospeo)
+- **Ready-to-send outreach** — LinkedIn DM (<300 chars), follow-up email, talking points
+- **Persistent** — persona + contact history saved to your own Supabase (or local fallback)
 
 ---
 
 ## How it works
 
-Snap a business card or type a name and company. Craft'ed does the rest:
-
-**1. Identify**
-Reads the business card instantly, or takes a name and company you type in. No manual data entry.
-
-**2. Research**
-Enriches the contact with real professional context — role, background, career history — and scans their company's job board for openings that actually fit your profile.
-
-**3. Craft**
-Generates a ready-to-send follow-up package: a personalized LinkedIn DM, a warm follow-up email, and a one-glance intel brief on the person and their company.
-
-Everything is researched, personalized, and ready to send before you've even left the venue.
-
----
-
-## What you get for every contact
-
-- **Personalized LinkedIn DM** — short, human, references where you met. First-message ready.
-- **Follow-up email** — warm and specific, with a clear ask and the right context built in.
-- **Intel brief** — who they are, what their company does, where it's headed, and the single best reason to reach out.
-- **Matched opportunities** — open roles at their company that fit your background, surfaced automatically with a one-line "why this fits."
-- **Talking points** — natural conversation starters for when you reconnect.
-
-No templates. No generic "great to meet you" filler. Every message is built from real research on the specific person in front of you.
+```
+name + company (or card photo)
+        │
+        ▼  OCR (Claude Vision, if a card)
+   resolved contact
+        ├───────────────┬───────────────┐
+        ▼               ▼               ▼
+  web research      job scan        email find
+  (Tavily+Claude)   (ATS APIs)      (Prospeo)
+        └───────────────┴───────────────┘
+                        ▼  synthesis (Claude)
+                   Intel brief + outreach  →  dashboard
+```
 
 ---
 
-## Who it's for
+## Tech stack
 
-**At events.** Conferences, career fairs, meetups, summits — anywhere you meet more people than you can possibly follow up with by hand.
-
-**For your career.** Land in front of the right recruiters and hiring managers with a message that proves you did the homework — and a role at their company already matched to your profile.
-
-**For sales teams.** Every booth conversation, every badge scan, every handshake becomes a qualified, researched pipeline entry instead of a name you'll never get back to. Turn event touchpoints into real opportunities at scale.
+- **Backend** — FastAPI (Python 3.10+), async pipeline, Anthropic Claude
+- **Frontend** — Next.js 14 + TypeScript + Tailwind
+- **Data** — Supabase (Postgres) with local JSON/localStorage fallback
 
 ---
 
-## Why it works
+## Quickstart
 
-Follow-ups fail for one reason: the gap between meeting someone and reaching out is too long, and by the time you act, the personalization isn't worth the effort. Craft'ed collapses that gap to seconds and removes the effort entirely — so the warm, specific, researched follow-up becomes the easy default, not the thing you mean to do and never get to.
+### Prerequisites
+- **Python 3.10+** (the API uses `X | None` runtime annotations)
+- **Node.js 18+**
+- An **Anthropic API key** (required). Everything else is optional.
 
-The result: more replies, warmer conversations, and a follow-up game that actually scales with how many people you meet.
+### 1. Backend
+```bash
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                  # then edit .env (see Keys below)
+uvicorn app.main:app --reload --port 8000
+```
+
+### 2. Frontend
+```bash
+cd web
+npm install
+cp .env.example .env.local            # NEXT_PUBLIC_API_URL=http://localhost:8000
+npm run dev
+```
+
+Open **http://localhost:3000**.
 
 ---
 
-## Roadmap
+## Keys (bring your own)
 
-- **Event mode** — built first for conferences and career fairs.
-- **Career fair mode** — outreach framed candidate-to-employer, tuned to your target roles.
-- **Sales platform** — team workspaces, CRM sync, and batch processing to convert every event touchpoint into pipeline.
+Only **Anthropic is required**. Each other key unlocks a feature; without it that feature degrades gracefully.
+
+| Key | Required? | Unlocks | Get it |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | **Yes** | Card OCR + brief/DM/email generation | [console.anthropic.com](https://console.anthropic.com) |
+| `TAVILY_API_KEY` | No | Live person/company research (else public data only) | [tavily.com](https://tavily.com) (free tier) |
+| `PROSPEO_API_KEY` | No | Verified email lookup | [prospeo.io](https://prospeo.io) (free tier) |
+| `EXA_API_KEY` | No | "Find people" discovery | [exa.ai](https://exa.ai) (pay-as-you-go) |
+| `APIFY_API_TOKEN` | No | LinkedIn job fallback (off-ATS companies) | [apify.com](https://apify.com) |
+| `SUPABASE_URL` + `SUPABASE_KEY` | No | Persist persona + contacts (else local fallback) | see below |
+
+Run with just `ANTHROPIC_API_KEY` and you still get the full brief from public data + free ATS job boards.
 
 ---
 
-*Craft'ed — meet someone, follow up before you leave the room.*
+## Optional: persistence with Supabase
+
+Without Supabase, runs persist to a local `.craftd_runs.json` and your persona to browser `localStorage`. To persist server-side (and across browsers), create a free [Supabase](https://supabase.com) project, run this in its **SQL Editor**, then add `SUPABASE_URL` + the **service_role** key to `.env`:
+
+```sql
+create table if not exists personas (
+  device_id text primary key,
+  name text not null, position text not null, goal text not null,
+  resume_summary text, skills jsonb default '[]'::jsonb,
+  target_roles jsonb default '[]'::jsonb,
+  updated_at double precision default extract(epoch from now())
+);
+create table if not exists runs (
+  id text primary key, device_id text not null,
+  name text, company text, title text, event_name text,
+  status text not null default 'queued', report jsonb, error text,
+  created_at double precision default extract(epoch from now()),
+  updated_at double precision default extract(epoch from now())
+);
+create index if not exists runs_device_idx on runs (device_id, created_at desc);
+```
+
+> The backend uses the `service_role` key (backend-only, never sent to the browser). For a shared multi-user deployment you'd add Supabase Auth + Row-Level Security.
+
+---
+
+## Project structure
+
+```
+app/                 FastAPI backend
+  api/routes.py      endpoints
+  models/pipeline.py typed pipeline models
+  services/          ocr · research · jobs · email · discovery · report · queue
+web/                 Next.js frontend
+  app/page.tsx       dashboard + onboarding
+  components/        Dashboard, ResultBrief, FindPeople, Onboarding, ...
+```
+
+---
+
+## Notes & limits
+
+- **Personal/pilot scope.** Single-user per instance, scoped by a per-browser `device_id` (no auth). Self-host one instance per person.
+- **Find people** returns *published* people (employees, speakers, sponsors) — there's no public source for full event attendee lists.
+- **Email finding** hits best on standard corporate patterns; some contacts won't resolve (you'll just see no email, never a guess).
+- API usage is billed to **your** keys.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
