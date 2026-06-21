@@ -46,20 +46,30 @@ export function ResultBrief({ report, onReset }: { report: IntelReport; onReset:
             </span>
           </div>
         </div>
+      </div>
 
-        {report.contact_email && (
-          <div className="mt-4 flex items-center gap-2 rounded-md border border-hairline bg-canvas px-3 py-2">
-            <svg className="shrink-0 text-brand-coral" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
-              <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <a href={`mailto:${report.contact_email}`} className="min-w-0 flex-1 truncate text-xs text-ink hover:underline">
+      {/* Verified email — explicit, actionable card */}
+      {report.contact_email && (
+        <Card tone="mint" title="Verified email" delay={1} icon={<IconMail />} action={<CopyButton text={report.contact_email} />}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <a
+              href={`mailto:${report.contact_email}`}
+              className="min-w-0 flex-1 truncate text-base font-semibold text-ink hover:underline"
+            >
               {report.contact_email}
             </a>
-            <CopyButton text={report.contact_email} label="Copy" />
+            <a
+              href={`mailto:${report.contact_email}?subject=${encodeURIComponent(o.follow_up_email_subject)}&body=${encodeURIComponent(o.follow_up_email_body)}`}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-on-primary transition hover:bg-body-strong"
+            >
+              Send email
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
           </div>
-        )}
-      </div>
+        </Card>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         {/* Left column — the intel */}
