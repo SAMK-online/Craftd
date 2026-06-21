@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteRun, enqueueRun, getRun, listRuns } from "@/lib/api";
+import { PeopleStack } from "@/components/PeopleStack";
 import { ResultBrief } from "@/components/ResultBrief";
 import type { IntelReport, RunStatus, RunSummary, UserPersona } from "@/lib/types";
 
@@ -235,21 +236,28 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
         </div>
       )}
 
-      {/* Sections */}
-      {ready.length > 0 && (
-        <Section title="Ready to send" count={ready.length}>
-          {ready.map((r, i) => renderCard(r, i))}
-        </Section>
-      )}
+      {/* Active items first (flat) */}
       {inProgress.length > 0 && (
         <Section title="In progress" count={inProgress.length}>
-          {inProgress.map((r, i) => renderCard(r, ready.length + i))}
+          {inProgress.map((r, i) => renderCard(r, i))}
         </Section>
       )}
       {failed.length > 0 && (
         <Section title="Needs attention" count={failed.length}>
-          {failed.map((r, i) => renderCard(r, ready.length + inProgress.length + i))}
+          {failed.map((r, i) => renderCard(r, inProgress.length + i))}
         </Section>
+      )}
+
+      {/* Collected contacts — the deck */}
+      {ready.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Your contacts</span>
+            <span className="rounded-full bg-surface-strong px-1.5 text-[10px] font-semibold text-muted">{ready.length}</span>
+            <span className="ml-auto text-[10px] text-muted-soft">scroll · tap a card to open</span>
+          </div>
+          <PeopleStack runs={ready} onOpen={openRun} />
+        </div>
       )}
     </div>
   );
