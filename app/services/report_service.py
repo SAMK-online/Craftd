@@ -170,12 +170,15 @@ async def generate_report(
     settings = get_settings()
     client = anthropic.AsyncAnthropic(api_key=settings.require_anthropic())
 
+    has_company = bool(company and company.upper() != "UNKNOWN")
+    company_display = company if has_company else ""
+
     prompt = REPORT_PROMPT_TEMPLATE.format(
         user_name=persona.name if persona else "the user",
         goal_label=persona.goal_label() if persona else "a genuine connection",
         name=name,
         title=title or "Unknown",
-        company=company,
+        company=company if has_company else "(unknown — lean on the conversation notes)",
         enrichment_summary=_build_enrichment_summary(enrichment),
         jobs_summary=_build_jobs_summary(jobs),
         event_name=event_name or "a tech event",
@@ -214,7 +217,7 @@ async def generate_report(
 
     return IntelReport(
         contact_name=name,
-        contact_company=company,
+        contact_company=company_display,
         contact_title=title,
         contact_email=enrichment.person.verified_email if enrichment else None,
         person_summary=data["person_summary"],

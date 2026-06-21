@@ -66,10 +66,11 @@ class ContactInput(BaseModel):
     )
 
     def model_post_init(self, __context) -> None:
-        if not self.card_image_base64 and not (self.name and self.company):
-            raise ValueError(
-                "Provide either card_image_base64 or both name and company"
-            )
+        # A name (or a card to read one from) is the minimum. Company is optional
+        # — event hosts/attendees often have just a name; the brief degrades
+        # gracefully (skips company research/jobs) and leans on context.
+        if not self.card_image_base64 and not self.name:
+            raise ValueError("Provide either a card image or at least a name")
 
 
 # ─── OCR Stage ────────────────────────────────────────────────────────────────

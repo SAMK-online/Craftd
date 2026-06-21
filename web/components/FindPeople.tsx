@@ -79,10 +79,17 @@ export function FindPeople({ onPick }: { onPick: (input: GenerateInput) => void 
                 )}
               </div>
               <button
-                onClick={() => onPick({ name: c.name, company: c.company ?? undefined, title: c.title ?? undefined })}
-                disabled={!c.company}
-                title={c.company ? "" : "No company found — can't craft a brief"}
-                className="shrink-0 rounded-md bg-ink px-3 py-2 text-xs font-semibold text-on-primary transition hover:bg-body-strong active:scale-95 disabled:bg-surface-strong disabled:text-muted-soft"
+                onClick={() =>
+                  onPick({
+                    name: c.name,
+                    company: c.company ?? undefined,
+                    title: c.title ?? undefined,
+                    // For an event-link search, pass the source as context so a
+                    // name-only contact still gets a grounded follow-up.
+                    context: /^https?:\/\//.test(query) ? `Found via event page: ${query}` : undefined,
+                  })
+                }
+                className="shrink-0 rounded-md bg-ink px-3 py-2 text-xs font-semibold text-on-primary transition hover:bg-body-strong active:scale-95"
               >
                 Craft →
               </button>
