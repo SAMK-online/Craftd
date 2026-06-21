@@ -61,57 +61,65 @@ export function ResultBrief({ report, onReset }: { report: IntelReport; onReset:
         )}
       </div>
 
-      <Card tone="lavender" title="Who they are" delay={1} icon={<IconUser />}>
-        <p className="text-[15px] leading-relaxed">{report.person_summary}</p>
-      </Card>
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        {/* Left column — the intel */}
+        <div className="space-y-5">
+          <Card tone="lavender" title="Who they are" delay={1} icon={<IconUser />}>
+            <p className="text-[15px] leading-relaxed">{report.person_summary}</p>
+          </Card>
 
-      <Card tone="peach" title="Company" delay={2} icon={<IconBuilding />}>
-        <p className="text-[15px] leading-relaxed">{report.company_snapshot}</p>
-      </Card>
+          <Card tone="peach" title="Company" delay={2} icon={<IconBuilding />}>
+            <p className="text-[15px] leading-relaxed">{report.company_snapshot}</p>
+          </Card>
 
-      <Card tone="teal" title="Why follow up" delay={3} icon={<IconSpark />}>
-        <p className="text-[15px] leading-relaxed">{report.opportunity_angle}</p>
-      </Card>
+          <Card tone="teal" title="Why follow up" delay={3} icon={<IconSpark />}>
+            <p className="text-[15px] leading-relaxed">{report.opportunity_angle}</p>
+          </Card>
 
-      {report.top_job_matches.length > 0 && (
-        <Card tone="cream" title={`Open roles · ${report.top_job_matches.length}`} delay={4} icon={<IconBriefcase />}>
-          <div className="space-y-3">
-            {report.top_job_matches.map((j, i) => (
-              <JobCard key={i} job={j} />
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card tone="pink" title="LinkedIn DM" delay={5} icon={<IconChat />} action={<CopyButton text={o.linkedin_dm} onColor />}>
-        <p className="whitespace-pre-wrap rounded-md bg-white/15 p-4 text-[15px] leading-relaxed">{o.linkedin_dm}</p>
-        <p className="mt-1.5 text-right text-[10px] tabular-nums text-white/70">{o.linkedin_dm.length} / 300</p>
-      </Card>
-
-      <Card tone="cream" title="Follow-up email" delay={6} icon={<IconMail />} action={<CopyButton text={emailFull} />}>
-        <div className="rounded-md border border-hairline bg-canvas p-4">
-          <p className="border-b border-hairline pb-2 text-xs text-muted">
-            <span className="text-muted-soft">Subject:</span>{" "}
-            <span className="font-semibold text-ink">{o.follow_up_email_subject}</span>
-          </p>
-          <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{o.follow_up_email_body}</p>
+          {report.top_job_matches.length > 0 && (
+            <Card tone="cream" title={`Open roles · ${report.top_job_matches.length}`} delay={4} icon={<IconBriefcase />}>
+              <div className="space-y-3">
+                {report.top_job_matches.map((j, i) => (
+                  <JobCard key={i} job={j} />
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
-      </Card>
 
-      {o.talking_points.length > 0 && (
-        <Card tone="ochre" title="Talking points" delay={7} icon={<IconList />}>
-          <ul className="space-y-3">
-            {o.talking_points.map((p, i) => (
-              <li key={i} className="flex gap-3 text-[15px] leading-relaxed">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-ink text-[10px] font-bold text-on-primary">
-                  {i + 1}
-                </span>
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+        {/* Right column — the outreach */}
+        <div className="space-y-5">
+          <Card tone="pink" title="LinkedIn DM" delay={2} icon={<IconChat />} action={<CopyButton text={o.linkedin_dm} onColor />}>
+            <p className="whitespace-pre-wrap rounded-md bg-white/15 p-4 text-[15px] leading-relaxed">{o.linkedin_dm}</p>
+            <p className="mt-1.5 text-right text-[10px] tabular-nums text-white/70">{o.linkedin_dm.length} / 300</p>
+          </Card>
+
+          <Card tone="cream" title="Follow-up email" delay={3} icon={<IconMail />} action={<CopyButton text={emailFull} />}>
+            <div className="rounded-md border border-hairline bg-canvas p-4">
+              <p className="border-b border-hairline pb-2 text-xs text-muted">
+                <span className="text-muted-soft">Subject:</span>{" "}
+                <span className="font-semibold text-ink">{o.follow_up_email_subject}</span>
+              </p>
+              <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{o.follow_up_email_body}</p>
+            </div>
+          </Card>
+
+          {o.talking_points.length > 0 && (
+            <Card tone="ochre" title="Talking points" delay={4} icon={<IconList />}>
+              <ul className="space-y-3">
+                {o.talking_points.map((p, i) => (
+                  <li key={i} className="flex gap-3 text-[15px] leading-relaxed">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-ink text-[10px] font-bold text-on-primary">
+                      {i + 1}
+                    </span>
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
+      </div>
 
       <button
         onClick={onReset}

@@ -97,20 +97,22 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
     setRuns((rs) => rs.filter((r) => r.id !== id));
   }
 
-  // Full-screen brief overlay
+  // Full-screen wide brief overlay (breaks out of the narrow dashboard column)
   if (open && open.report) {
     return (
-      <div className="animate-fade-up">
-        <button
-          onClick={() => setOpen(null)}
-          className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-ink"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M15 18 9 12l6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Dashboard
-        </button>
-        <ResultBrief report={open.report} onReset={() => setOpen(null)} />
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas">
+        <div className="mx-auto max-w-4xl animate-fade-up px-4 py-8">
+          <button
+            onClick={() => setOpen(null)}
+            className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-ink"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M15 18 9 12l6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Dashboard
+          </button>
+          <ResultBrief report={open.report} onReset={() => setOpen(null)} />
+        </div>
       </div>
     );
   }
