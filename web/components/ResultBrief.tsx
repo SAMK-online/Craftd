@@ -49,6 +49,22 @@ export function ResultBrief({
             {report.enrichment_used ? "● Researched" : "Public data"}
           </span>
         </div>
+
+        {report.contact_email && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/8 bg-black/20 px-3 py-2">
+            <svg className="shrink-0 text-violet-300" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <a
+              href={`mailto:${report.contact_email}`}
+              className="min-w-0 flex-1 truncate font-[family-name:var(--font-geist-mono)] text-xs text-zinc-200 hover:text-white"
+            >
+              {report.contact_email}
+            </a>
+            <CopyButton text={report.contact_email} label="Copy" />
+          </div>
+        )}
       </div>
 
       <Card title="Who they are" delay={1} icon={<IconUser />}>

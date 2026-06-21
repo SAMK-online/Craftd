@@ -23,6 +23,7 @@ export interface IntelReport {
   contact_name: string;
   contact_company: string;
   contact_title?: string | null;
+  contact_email?: string | null;
   person_summary: string;
   company_snapshot: string;
   opportunity_angle: string;

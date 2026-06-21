@@ -196,6 +196,7 @@ async def generate_report(
         contact_name=name,
         contact_company=company,
         contact_title=title,
+        contact_email=enrichment.person.verified_email if enrichment else None,
         person_summary=data["person_summary"],
         company_snapshot=data["company_snapshot"],
         opportunity_angle=data["opportunity_angle"],

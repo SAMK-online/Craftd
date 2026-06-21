@@ -152,6 +152,9 @@ class IntelReport(BaseModel):
     contact_name: str
     contact_company: str
     contact_title: Optional[str] = None
+    contact_email: Optional[str] = Field(
+        None, description="Verified work email, if one was found"
+    )
 
     person_summary: str = Field(
         description="2–3 sentence summary of who they are and their career trajectory"

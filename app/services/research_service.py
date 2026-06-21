@@ -32,6 +32,7 @@ from app.models.pipeline import (
     FundingStage,
     PersonEnrichment,
 )
+from app.services.email_service import domain_from_website, find_email
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,14 @@ async def enrich_contact(
     except Exception as e:
         logger.error("Research synthesis failed: %s", e, exc_info=True)
         return None
+
+    # Find a verified email if we don't already have one (e.g. from a card).
+    if not email and settings.prospeo_configured:
+        website = (data.get("company") or {}).get("website")
+        domain = domain_from_website(website)
+        found = await find_email(name, company, domain)
+        if found:
+            email = found[0]
 
     return _build_result(name, company, title, email, linkedin_url, data)
 

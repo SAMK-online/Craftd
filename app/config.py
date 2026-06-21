@@ -12,6 +12,8 @@ service layer:
   tavily_api_key           -> research_service (live web research)
   tavily_max_results       -> research_service (results per query)
   tavily_configured        -> research_service (skip enrichment if False)
+  prospeo_api_key          -> email_service (verified email lookup)
+  prospeo_configured       -> email_service / research_service (skip if False)
   apify_api_token          -> jobs_service (fallback scraper auth)
   apify_configured         -> jobs_service (skip Apify fallback if False)
   linkedin_scrape_enabled  -> reserved for the direct-LinkedIn path
@@ -66,6 +68,11 @@ class Settings(BaseSettings):
         default=5, ge=1, le=10, description="Results per Tavily query"
     )
 
+    # ── Email finding (Prospeo) ───────────────────────────────────────────────
+    prospeo_api_key: str = Field(
+        default="", description="Prospeo API key for verified-email lookup"
+    )
+
     # ── App runtime ───────────────────────────────────────────────────────────
     app_env: Literal["development", "staging", "production"] = Field(
         default="development", description="Deployment environment"
@@ -78,6 +85,12 @@ class Settings(BaseSettings):
     def apify_configured(self) -> bool:
         """True when the Apify fallback scraper can be called."""
         return bool(self.apify_api_token)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def prospeo_configured(self) -> bool:
+        """True when verified-email lookup can run."""
+        return bool(self.prospeo_api_key)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -127,6 +140,8 @@ def get_settings() -> Settings:
             "Tavily not configured - enrichment will be skipped (set TAVILY_API_KEY). "
             "Briefs still generate from public data + job boards."
         )
+    if not settings.prospeo_configured:
+        logger.info("Prospeo not configured - briefs will omit verified emails (set PROSPEO_API_KEY).")
     if not settings.apify_configured:
         logger.debug("Apify not configured - job search will use ATS APIs only.")
 
