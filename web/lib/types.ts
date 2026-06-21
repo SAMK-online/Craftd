@@ -32,6 +32,15 @@ export interface IntelReport {
   enrichment_used: boolean;
 }
 
+// A person discovered via the "Find people" search.
+export interface FoundContact {
+  name: string;
+  company?: string | null;
+  title?: string | null;
+  linkedin_url?: string | null;
+  email?: string | null;
+}
+
 // Input the user provides to kick off the pipeline.
 export interface GenerateInput {
   name?: string;

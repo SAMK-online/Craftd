@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { CaptureForm } from "@/components/CaptureForm";
+import { FindPeople } from "@/components/FindPeople";
 import { Logo } from "@/components/Logo";
 import { ProgressStream } from "@/components/ProgressStream";
 import { ResultBrief } from "@/components/ResultBrief";
@@ -42,7 +43,10 @@ function initialStages(hasCard: boolean): StageState[] {
   }));
 }
 
+type Tab = "followup" | "find";
+
 export default function Home() {
+  const [tab, setTab] = useState<Tab>("followup");
   const [phase, setPhase] = useState<Phase>("input");
   const [stages, setStages] = useState<StageState[]>([]);
   const [report, setReport] = useState<IntelReport | null>(null);
@@ -149,7 +153,33 @@ export default function Home() {
       </header>
 
       <div className="flex-1">
-        {phase === "input" && <CaptureForm onSubmit={run} disabled={false} />}
+        {phase === "input" && (
+          <div className="space-y-5">
+            <div className="glass relative flex rounded-2xl p-1">
+              <span
+                className="accent-gradient absolute inset-y-1 w-[calc(50%-0.25rem)] rounded-xl transition-transform duration-300 ease-out"
+                style={{ transform: tab === "followup" ? "translateX(0)" : "translateX(100%)" }}
+                aria-hidden
+              />
+              {(["followup", "find"] as Tab[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`relative z-10 flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+                    tab === t ? "text-white" : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  {t === "followup" ? "Follow up" : "Find people"}
+                </button>
+              ))}
+            </div>
+            {tab === "followup" ? (
+              <CaptureForm onSubmit={run} disabled={false} />
+            ) : (
+              <FindPeople onPick={run} />
+            )}
+          </div>
+        )}
 
         {phase === "running" && (
           <div className="space-y-5">

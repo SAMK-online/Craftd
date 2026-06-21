@@ -73,6 +73,15 @@ class Settings(BaseSettings):
         default="", description="Prospeo API key for verified-email lookup"
     )
 
+    # ── Contact discovery (Exa Websets) ───────────────────────────────────────
+    exa_api_key: str = Field(
+        default="", description="Exa API key for Websets contact/list finding"
+    )
+    websets_timeout_seconds: int = Field(
+        default=90, ge=10, le=240,
+        description="Max seconds to wait for Websets results before returning what we have"
+    )
+
     # ── App runtime ───────────────────────────────────────────────────────────
     app_env: Literal["development", "staging", "production"] = Field(
         default="development", description="Deployment environment"
@@ -91,6 +100,12 @@ class Settings(BaseSettings):
     def prospeo_configured(self) -> bool:
         """True when verified-email lookup can run."""
         return bool(self.prospeo_api_key)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def exa_configured(self) -> bool:
+        """True when Websets contact discovery can run."""
+        return bool(self.exa_api_key)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

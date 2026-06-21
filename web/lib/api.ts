@@ -1,4 +1,9 @@
-import type { GenerateInput, StreamEvent, StreamEventName } from "./types";
+import type {
+  FoundContact,
+  GenerateInput,
+  StreamEvent,
+  StreamEventName,
+} from "./types";
 
 // Base URL of the FastAPI backend. Override via NEXT_PUBLIC_API_URL.
 export const API_BASE =
@@ -61,6 +66,25 @@ export async function streamGenerate(
       if (parsed) onEvent(parsed);
     }
   }
+}
+
+/** Discover people matching a free-text query (Exa Search + Claude). */
+export async function findPeople(
+  query: string,
+  count = 5,
+  signal?: AbortSignal,
+): Promise<FoundContact[]> {
+  const fd = new FormData();
+  fd.append("query", query);
+  fd.append("count", String(count));
+  const resp = await fetch(`${API_BASE}/api/find`, {
+    method: "POST",
+    body: fd,
+    signal,
+  });
+  if (!resp.ok) throw new Error(`Search failed (${resp.status})`);
+  const json = await resp.json();
+  return (json.contacts ?? []) as FoundContact[];
 }
 
 function parseFrame(frame: string): StreamEvent | null {

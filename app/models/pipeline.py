@@ -131,6 +131,17 @@ class JobBoardResult(BaseModel):
     error: Optional[str] = None
 
 
+# ─── Contact Discovery (Exa Websets) ──────────────────────────────────────────
+
+class FoundContact(BaseModel):
+    """A person discovered via Websets search, before any brief is generated."""
+    name: str
+    company: Optional[str] = None
+    title: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    email: Optional[str] = None
+
+
 # ─── Report Generation Stage ──────────────────────────────────────────────────
 
 class OutreachDraft(BaseModel):

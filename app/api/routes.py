@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 
 from app.models.pipeline import ContactInput, IntelReport, JobBoardResult, ParsedCard
 from app.services.research_service import enrich_contact
+from app.services.discovery_service import find_people
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card
 from app.services.pipeline import run_pipeline
@@ -255,3 +256,13 @@ async def jobs_only(company: str = Form(...)):
     """Search for target roles at a company. Good for testing."""
     result = await find_jobs_at_company(company)
     return result.model_dump()
+
+
+@router.post("/find", response_model=None)
+async def find_contacts(query: str = Form(...), count: int = Form(5)):
+    """Discover people matching a free-text query via Exa Websets.
+
+    Returns a list of contacts the user can then run through /generate.
+    """
+    contacts = await find_people(query=query, count=count)
+    return {"query": query, "count": len(contacts), "contacts": [c.model_dump() for c in contacts]}
