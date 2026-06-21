@@ -21,6 +21,18 @@ It's **bring-your-own-keys**: clone it, drop in your API keys, run it locally. E
 
 ---
 
+## Screenshots
+
+| Event dashboard | Intel brief |
+|---|---|
+| ![Dashboard — stats + contact deck](docs/screenshots/event-dashboard.png) | ![Brief — research, roles, outreach](docs/screenshots/intel-brief.png) |
+
+Drop a name → it processes in the background and lands on the dashboard as a card.
+Tap a card to open the full brief: who they are, company, why to follow up, open
+roles that fit you (with apply links), a verified email, and ready-to-send DM + email.
+
+---
+
 ## How it works
 
 ```

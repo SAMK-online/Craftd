@@ -1,0 +1,12 @@
+.venv
+venv
+__pycache__
+*.py[cod]
+.env
+.git
+.gitignore
+.craftd_runs.json
+web/node_modules
+web/.next
+*.md
+docs
