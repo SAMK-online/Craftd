@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Craft'ed",
+  title: "Craft'd",
   description:
     "Meet someone at an event → a warm, researched follow-up before you leave the room.",
 };

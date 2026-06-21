@@ -79,7 +79,7 @@ export function Onboarding({
       <header className="mb-8 flex flex-col items-center text-center">
         <Logo size={44} />
         <h1 className="mt-4 font-display text-3xl text-ink">
-          {initial ? "Edit your profile" : "Welcome to Craft'ed"}
+          {initial ? "Edit your profile" : "Welcome to Craft'd"}
         </h1>
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted text-balance">
           Tell us about you — every brief, DM, and job match is tailored to your goal.

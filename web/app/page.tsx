@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Dashboard } from "@/components/Dashboard";
 import { FindPeople } from "@/components/FindPeople";
-import { Logo } from "@/components/Logo";
 import { Onboarding } from "@/components/Onboarding";
 import { enqueueRun, getServerPersona, saveServerPersona } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
@@ -70,9 +69,9 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-3xl flex-col px-4 py-10">
       <header className="mb-7 flex flex-col items-center text-center">
-        <Logo size={44} />
-        <h1 className="mt-4 font-display-tight text-4xl text-ink">Craft&apos;ed</h1>
-        <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted text-balance">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Craft'd" className="h-24 w-auto object-contain" />
+        <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted text-balance">
           Drop a name as you meet people — briefs research in the background and land on your dashboard.
         </p>
         <button
