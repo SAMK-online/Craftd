@@ -22,20 +22,25 @@ export function PeopleStack({
   onOpen: (r: RunSummary) => void;
 }) {
   const n = runs.length;
-  // Enough scroll room to fan the deck, capped so it isn't endless.
-  const heightVh = Math.min(110 + n * 40, 300);
+  // Modest scroll room to fan the deck without leaving a huge empty page.
+  const heightVh = Math.min(80 + n * 26, 220);
 
   return (
     <ContainerScroll style={{ height: `${heightVh}vh` }}>
-      <div className="sticky top-6 flex h-[62vh] w-full items-start justify-center">
+      <div className="sticky top-6 flex h-[58vh] w-full items-start justify-center">
         <CardsContainer className="h-[250px] w-full max-w-[360px]">
           {runs.map((r, index) => {
             const tone = AVATAR_TONES[index % AVATAR_TONES.length];
+            // Gentle symmetric fan (±~6°) that straightens as you scroll.
+            const fan = Math.round((index - (n - 1) / 2) * 6);
             return (
               <CardTransformed
                 key={r.id}
                 arrayLength={n}
                 index={index + 2}
+                incrementRotation={fan}
+                incrementY={8}
+                incrementZ={12}
                 onClick={() => onOpen(r)}
                 role="button"
                 aria-label={`Open brief for ${r.name}`}

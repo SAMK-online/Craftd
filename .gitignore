@@ -23,3 +23,6 @@ redesign-*.png
 
 # Async run store
 .craftd_runs.json
+verify.png
+dash*.png
+report.png
