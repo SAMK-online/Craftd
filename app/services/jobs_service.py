@@ -13,6 +13,7 @@ none are provided, a broad default keyword set is used.
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
 import re
 from urllib.parse import quote
@@ -29,6 +30,16 @@ DEFAULT_KEYWORDS = [
     "engineer", "manager", "designer", "analyst", "scientist",
     "developer", "marketing", "product", "intern",
 ]
+
+
+def _clean_snippet(raw: str | None, limit: int = 360) -> str:
+    """Strip HTML/entities from a scraped JD into a readable brief."""
+    if not raw:
+        return ""
+    text = html.unescape(raw)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
 
 
 def _matched_keyword(title: str, keywords: list[str]) -> str | None:
@@ -82,7 +93,7 @@ async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str, keywords
                     company=company_slug.title(),
                     url=job.get("absolute_url", ""),
                     location=location,
-                    description_snippet=(job.get("content") or "")[:300],
+                    description_snippet=_clean_snippet(job.get("content")),
                     fit_reason=_fit_reason(title, company_slug.title(), matched),
                     ats_platform="Greenhouse",
                 )
@@ -112,9 +123,9 @@ async def _try_lever(client: httpx.AsyncClient, company_slug: str, keywords: lis
             location = job.get("categories", {}).get("location", "")
             snippet = ""
             if job.get("description"):
-                snippet = job["description"][:300]
+                snippet = _clean_snippet(job["description"])
             elif job.get("lists"):
-                snippet = job["lists"][0].get("content", "")[:300]
+                snippet = _clean_snippet(job["lists"][0].get("content", ""))
             matches.append(
                 JobMatch(
                     title=title,
@@ -173,7 +184,7 @@ async def _try_ashby(client: httpx.AsyncClient, company_slug: str, keywords: lis
                 job.get("locationName")
                 or job.get("jobLocation", {}).get("locationStr", "")
             )
-            snippet = (job.get("descriptionPlain") or "")[:300]
+            snippet = _clean_snippet(job.get("descriptionPlain"))
             matches.append(
                 JobMatch(
                     title=title,

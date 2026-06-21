@@ -112,7 +112,54 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
     );
   }
 
-  const readyCount = runs.filter((r) => r.status === "ready").length;
+  const ready = runs.filter((r) => r.status === "ready");
+  const inProgress = runs.filter((r) => r.status === "queued" || r.status === "running");
+  const failed = runs.filter((r) => r.status === "error");
+  const emailCount = runs.filter((r) => r.has_email).length;
+
+  const renderCard = (r: RunSummary, i: number) => {
+    const tone = AVATAR_TONES[i % AVATAR_TONES.length];
+    const s = STATUS[r.status];
+    return (
+      <div
+        key={r.id}
+        onClick={() => openRun(r)}
+        className={`group flex items-center gap-3 rounded-lg border border-hairline bg-canvas p-3.5 transition ${
+          r.status === "ready" ? "cursor-pointer hover:border-ink/30" : ""
+        }`}
+      >
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${tone} ${DARK.has(tone) ? "text-white" : "text-ink"}`}>
+          {initials(r.name) || "?"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
+          <p className="truncate text-xs text-muted">
+            {r.company || "—"}
+            {r.status === "ready" && r.jobs_found ? ` · ${r.jobs_found} role${r.jobs_found === 1 ? "" : "s"}` : ""}
+            {r.status === "ready" && r.has_email ? " · ✉ email" : ""}
+            {r.status === "error" && r.error ? ` · ${r.error.slice(0, 40)}` : ""}
+            {r.status !== "error" && ` · ${timeAgo(r.created_at)}`}
+          </p>
+        </div>
+        <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${s.cls}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+          {s.label}
+        </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            remove(r.id);
+          }}
+          className="shrink-0 rounded-md p-1 text-muted-soft opacity-0 transition hover:text-ink group-hover:opacity-100"
+          aria-label="Remove"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -172,12 +219,14 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
         />
       </div>
 
-      {/* Dashboard list */}
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-          {runs.length === 0 ? "No contacts yet" : `${runs.length} contact${runs.length === 1 ? "" : "s"} · ${readyCount} ready`}
-        </span>
-      </div>
+      {/* Stats strip */}
+      {runs.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <Stat label="Contacts" value={runs.length} fill="bg-surface-card" />
+          <Stat label="Ready" value={ready.length} fill="bg-brand-mint" />
+          <Stat label="Emails" value={emailCount} fill="bg-brand-peach" />
+        </div>
+      )}
 
       {runs.length === 0 && (
         <div className="rounded-xl border border-dashed border-hairline bg-surface-card p-8 text-center">
@@ -186,50 +235,43 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
         </div>
       )}
 
-      <div className="space-y-2.5">
-        {runs.map((r, i) => {
-          const tone = AVATAR_TONES[i % AVATAR_TONES.length];
-          const s = STATUS[r.status];
-          return (
-            <div
-              key={r.id}
-              onClick={() => openRun(r)}
-              className={`group flex items-center gap-3 rounded-lg border border-hairline bg-canvas p-3.5 transition ${
-                r.status === "ready" ? "cursor-pointer hover:border-ink/30" : ""
-              }`}
-            >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${tone} ${DARK.has(tone) ? "text-white" : "text-ink"}`}>
-                {initials(r.name) || "?"}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
-                <p className="truncate text-xs text-muted">
-                  {r.company}
-                  {r.status === "ready" && (r.jobs_found ? ` · ${r.jobs_found} role${r.jobs_found === 1 ? "" : "s"}` : "")}
-                  {r.status === "ready" && r.has_email ? " · email" : ""}
-                  {r.status === "error" && r.error ? ` · ${r.error.slice(0, 40)}` : ""}
-                </p>
-              </div>
-              <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${s.cls}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                {s.label}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  remove(r.id);
-                }}
-                className="shrink-0 rounded-md p-1 text-muted-soft opacity-0 transition hover:text-ink group-hover:opacity-100"
-                aria-label="Remove"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-          );
-        })}
+      {/* Sections */}
+      {ready.length > 0 && (
+        <Section title="Ready to send" count={ready.length}>
+          {ready.map((r, i) => renderCard(r, i))}
+        </Section>
+      )}
+      {inProgress.length > 0 && (
+        <Section title="In progress" count={inProgress.length}>
+          {inProgress.map((r, i) => renderCard(r, ready.length + i))}
+        </Section>
+      )}
+      {failed.length > 0 && (
+        <Section title="Needs attention" count={failed.length}>
+          {failed.map((r, i) => renderCard(r, ready.length + inProgress.length + i))}
+        </Section>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, fill }: { label: string; value: number; fill: string }) {
+  return (
+    <div className={`rounded-lg border border-hairline p-3 text-center ${fill}`}>
+      <div className="font-display text-2xl text-ink">{value}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-ink/60">{label}</div>
+    </div>
+  );
+}
+
+function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-2 px-1">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">{title}</span>
+        <span className="rounded-full bg-surface-strong px-1.5 text-[10px] font-semibold text-muted">{count}</span>
       </div>
+      {children}
     </div>
   );
 }

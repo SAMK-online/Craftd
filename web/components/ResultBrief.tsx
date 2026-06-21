@@ -1,61 +1,50 @@
 "use client";
 
-import type { IntelReport } from "@/lib/types";
+import type { IntelReport, JobMatch } from "@/lib/types";
 import { CopyButton } from "./CopyButton";
 
 type Tone = "cream" | "lavender" | "peach" | "teal" | "pink" | "ochre" | "mint";
 
-const TONE: Record<Tone, { bg: string; text: string; sub: string; onColor: boolean }> = {
-  cream: { bg: "bg-surface-card", text: "text-ink", sub: "text-muted", onColor: false },
-  lavender: { bg: "bg-brand-lavender", text: "text-ink", sub: "text-ink/70", onColor: false },
-  peach: { bg: "bg-brand-peach", text: "text-ink", sub: "text-ink/70", onColor: false },
-  ochre: { bg: "bg-brand-ochre", text: "text-ink", sub: "text-ink/75", onColor: false },
-  mint: { bg: "bg-brand-mint", text: "text-ink", sub: "text-ink/70", onColor: false },
-  teal: { bg: "bg-brand-teal", text: "text-white", sub: "text-white/75", onColor: true },
-  pink: { bg: "bg-brand-pink", text: "text-white", sub: "text-white/80", onColor: true },
+const TONE: Record<Tone, { bg: string; text: string; sub: string }> = {
+  cream: { bg: "bg-surface-card", text: "text-ink", sub: "text-muted" },
+  lavender: { bg: "bg-brand-lavender", text: "text-ink", sub: "text-ink/70" },
+  peach: { bg: "bg-brand-peach", text: "text-ink", sub: "text-ink/70" },
+  ochre: { bg: "bg-brand-ochre", text: "text-ink", sub: "text-ink/75" },
+  mint: { bg: "bg-brand-mint", text: "text-ink", sub: "text-ink/70" },
+  teal: { bg: "bg-brand-teal", text: "text-white", sub: "text-white/75" },
+  pink: { bg: "bg-brand-pink", text: "text-white", sub: "text-white/80" },
 };
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 }
 
-export function ResultBrief({
-  report,
-  onReset,
-}: {
-  report: IntelReport;
-  onReset: () => void;
-}) {
+export function ResultBrief({ report, onReset }: { report: IntelReport; onReset: () => void }) {
   const o = report.outreach;
   const emailFull = `Subject: ${o.follow_up_email_subject}\n\n${o.follow_up_email_body}`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Hero (cream) */}
-      <div className="animate-fade-up rounded-xl border border-hairline bg-surface-card p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-ink text-lg font-semibold text-on-primary">
+      <div className="animate-fade-up rounded-xl border border-hairline bg-surface-card p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-ink text-xl font-semibold text-on-primary">
             {initials(report.contact_name) || "?"}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-2xl text-ink">{report.contact_name}</h2>
-            <p className="truncate text-sm text-muted">
+            <h2 className="font-display text-2xl leading-tight text-ink">{report.contact_name}</h2>
+            <p className="mt-0.5 text-sm text-muted">
               {report.contact_title ? `${report.contact_title} · ` : ""}
               {report.contact_company}
             </p>
+            <span
+              className={`mt-2 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                report.enrichment_used ? "bg-brand-mint text-ink" : "bg-surface-strong text-muted"
+              }`}
+            >
+              {report.enrichment_used ? "● Researched" : "Public data"}
+            </span>
           </div>
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-              report.enrichment_used ? "bg-brand-mint text-ink" : "bg-surface-strong text-muted"
-            }`}
-          >
-            {report.enrichment_used ? "● Researched" : "Public data"}
-          </span>
         </div>
 
         {report.contact_email && (
@@ -73,66 +62,47 @@ export function ResultBrief({
       </div>
 
       <Card tone="lavender" title="Who they are" delay={1} icon={<IconUser />}>
-        <p className="text-sm leading-relaxed">{report.person_summary}</p>
+        <p className="text-[15px] leading-relaxed">{report.person_summary}</p>
       </Card>
 
       <Card tone="peach" title="Company" delay={2} icon={<IconBuilding />}>
-        <p className="text-sm leading-relaxed">{report.company_snapshot}</p>
+        <p className="text-[15px] leading-relaxed">{report.company_snapshot}</p>
       </Card>
 
       <Card tone="teal" title="Why follow up" delay={3} icon={<IconSpark />}>
-        <p className="text-sm leading-relaxed">{report.opportunity_angle}</p>
+        <p className="text-[15px] leading-relaxed">{report.opportunity_angle}</p>
       </Card>
 
       {report.top_job_matches.length > 0 && (
         <Card tone="cream" title={`Open roles · ${report.top_job_matches.length}`} delay={4} icon={<IconBriefcase />}>
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {report.top_job_matches.map((j, i) => (
-              <a
-                key={i}
-                href={j.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group block rounded-md border border-hairline bg-canvas p-3.5 transition hover:border-ink/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-sm font-semibold text-ink">{j.title}</span>
-                  <svg className="mt-0.5 shrink-0 text-muted-soft transition group-hover:text-ink" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
-                  {j.location && <span>{j.location}</span>}
-                  {j.location && j.ats_platform && <span className="text-muted-soft">·</span>}
-                  {j.ats_platform && <span>{j.ats_platform}</span>}
-                </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-body">{j.fit_reason}</p>
-              </a>
+              <JobCard key={i} job={j} />
             ))}
           </div>
         </Card>
       )}
 
       <Card tone="pink" title="LinkedIn DM" delay={5} icon={<IconChat />} action={<CopyButton text={o.linkedin_dm} onColor />}>
-        <p className="whitespace-pre-wrap rounded-md bg-white/15 p-3.5 text-sm leading-relaxed">{o.linkedin_dm}</p>
+        <p className="whitespace-pre-wrap rounded-md bg-white/15 p-4 text-[15px] leading-relaxed">{o.linkedin_dm}</p>
         <p className="mt-1.5 text-right text-[10px] tabular-nums text-white/70">{o.linkedin_dm.length} / 300</p>
       </Card>
 
       <Card tone="cream" title="Follow-up email" delay={6} icon={<IconMail />} action={<CopyButton text={emailFull} />}>
-        <div className="rounded-md border border-hairline bg-canvas p-3.5">
+        <div className="rounded-md border border-hairline bg-canvas p-4">
           <p className="border-b border-hairline pb-2 text-xs text-muted">
             <span className="text-muted-soft">Subject:</span>{" "}
             <span className="font-semibold text-ink">{o.follow_up_email_subject}</span>
           </p>
-          <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-body">{o.follow_up_email_body}</p>
+          <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{o.follow_up_email_body}</p>
         </div>
       </Card>
 
       {o.talking_points.length > 0 && (
         <Card tone="ochre" title="Talking points" delay={7} icon={<IconList />}>
-          <ul className="space-y-2.5">
+          <ul className="space-y-3">
             {o.talking_points.map((p, i) => (
-              <li key={i} className="flex gap-3 text-sm leading-relaxed">
+              <li key={i} className="flex gap-3 text-[15px] leading-relaxed">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-ink text-[10px] font-bold text-on-primary">
                   {i + 1}
                 </span>
@@ -147,9 +117,46 @@ export function ResultBrief({
         onClick={onReset}
         className="w-full rounded-md border border-hairline bg-canvas px-4 py-3.5 text-sm font-semibold text-ink transition hover:bg-surface-card"
       >
-        + New contact
+        ← Back to dashboard
       </button>
     </div>
+  );
+}
+
+function JobCard({ job: j }: { job: JobMatch }) {
+  return (
+    <div className="rounded-lg border border-hairline bg-canvas p-4">
+      <p className="text-[15px] font-semibold leading-snug text-ink">{j.title}</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {j.location && <Badge>{j.location}</Badge>}
+        {j.job_type && <Badge>{j.job_type}</Badge>}
+        {j.ats_platform && <Badge>{j.ats_platform}</Badge>}
+      </div>
+      <p className="mt-2.5 text-xs leading-relaxed text-body">
+        <span className="font-semibold text-ink">Why it fits — </span>
+        {j.fit_reason}
+      </p>
+      {j.description_snippet && (
+        <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted">{j.description_snippet}…</p>
+      )}
+      <a
+        href={j.url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-on-primary transition hover:bg-body-strong"
+      >
+        View role
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M7 17 17 7M17 7H8M17 7v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-surface-card px-2 py-0.5 text-[10px] font-medium text-muted">{children}</span>
   );
 }
 
@@ -171,10 +178,10 @@ function Card({
   const t = TONE[tone];
   return (
     <section
-      className={`animate-fade-up rounded-xl p-5 ${t.bg} ${t.text} ${tone === "cream" ? "border border-hairline" : ""}`}
+      className={`animate-fade-up rounded-xl p-6 ${t.bg} ${t.text} ${tone === "cream" ? "border border-hairline" : ""}`}
       style={{ animationDelay: `${delay * 55}ms` }}
     >
-      <div className="mb-2.5 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div className={`flex items-center gap-2 ${t.sub}`}>
           {icon}
           <h3 className="text-[11px] font-semibold uppercase tracking-wider">{title}</h3>
