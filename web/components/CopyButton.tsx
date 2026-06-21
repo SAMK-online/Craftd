@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 
+/**
+ * `onColor` = true when placed on a saturated (pink/teal) card → uses a
+ * translucent white chip instead of the default ink-on-cream chip.
+ */
 export function CopyButton({
   text,
   label = "Copy",
+  onColor = false,
 }: {
   text: string;
   label?: string;
+  onColor?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -21,15 +27,14 @@ export function CopyButton({
     }
   }
 
+  const base =
+    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition active:scale-95";
+  const cls = onColor
+    ? "border border-white/30 bg-white/15 text-white hover:bg-white/25"
+    : "border border-hairline bg-canvas text-ink hover:bg-surface-card";
+
   return (
-    <button
-      onClick={copy}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition active:scale-95 ${
-        copied
-          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-          : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-violet-500/50 hover:text-white"
-      }`}
-    >
+    <button onClick={copy} className={`${base} ${cls}`}>
       {copied ? (
         <>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
