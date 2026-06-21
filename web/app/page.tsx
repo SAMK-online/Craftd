@@ -25,10 +25,13 @@ export default function Home() {
     (async () => {
       // Prefer the DB-saved persona; fall back to a local cache.
       const server = await getServerPersona(id);
-      const p = server ?? loadPersona();
+      const local = loadPersona();
+      const p = server ?? local;
       if (p) {
         setPersona(p);
         savePersona(p); // keep a local cache in sync
+        // Migrate a pre-existing local persona into the DB so it persists.
+        if (!server) saveServerPersona(id, p);
       }
       setMounted(true);
     })();
