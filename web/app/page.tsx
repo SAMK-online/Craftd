@@ -68,7 +68,7 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-lg flex-col px-4 py-10">
+    <main className="mx-auto flex min-h-[100dvh] max-w-3xl flex-col px-4 py-10">
       <header className="mb-7 flex flex-col items-center text-center">
         <Logo size={44} />
         <h1 className="mt-4 font-display-tight text-4xl text-ink">Craft&apos;ed</h1>

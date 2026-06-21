@@ -2,30 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteRun, enqueueRun, getRun, listRuns } from "@/lib/api";
-import { PeopleStack } from "@/components/PeopleStack";
+import { ContactsGrid } from "@/components/ContactsGrid";
 import { ResultBrief } from "@/components/ResultBrief";
-import type { IntelReport, RunStatus, RunSummary, UserPersona } from "@/lib/types";
-
-const STATUS: Record<RunStatus, { label: string; cls: string; dot: string }> = {
-  queued: { label: "Queued", cls: "bg-surface-strong text-muted", dot: "bg-muted-soft" },
-  running: { label: "Researching", cls: "bg-brand-lavender text-ink", dot: "bg-ink animate-pulse" },
-  ready: { label: "Ready", cls: "bg-brand-mint text-ink", dot: "bg-ink" },
-  error: { label: "Failed", cls: "bg-brand-coral text-white", dot: "bg-white" },
-};
-
-const AVATAR_TONES = ["bg-brand-pink", "bg-brand-teal", "bg-brand-lavender", "bg-brand-peach", "bg-brand-ochre"];
-const DARK = new Set(["bg-brand-pink", "bg-brand-teal"]);
-
-function timeAgo(ts: number): string {
-  const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
-}
-
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
-}
+import type { IntelReport, RunSummary, UserPersona } from "@/lib/types";
 
 export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceId: string }) {
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -124,54 +103,8 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
     );
   }
 
-  const ready = runs.filter((r) => r.status === "ready");
-  const inProgress = runs.filter((r) => r.status === "queued" || r.status === "running");
-  const failed = runs.filter((r) => r.status === "error");
+  const readyCount = runs.filter((r) => r.status === "ready").length;
   const emailCount = runs.filter((r) => r.has_email).length;
-
-  const renderCard = (r: RunSummary, i: number) => {
-    const tone = AVATAR_TONES[i % AVATAR_TONES.length];
-    const s = STATUS[r.status];
-    return (
-      <div
-        key={r.id}
-        onClick={() => openRun(r)}
-        className={`group flex items-center gap-3 rounded-lg border border-hairline bg-canvas p-3.5 transition ${
-          r.status === "ready" ? "cursor-pointer hover:border-ink/30" : ""
-        }`}
-      >
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${tone} ${DARK.has(tone) ? "text-white" : "text-ink"}`}>
-          {initials(r.name) || "?"}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
-          <p className="truncate text-xs text-muted">
-            {r.company || "—"}
-            {r.status === "ready" && r.jobs_found ? ` · ${r.jobs_found} role${r.jobs_found === 1 ? "" : "s"}` : ""}
-            {r.status === "ready" && r.has_email ? " · ✉ email" : ""}
-            {r.status === "error" && r.error ? ` · ${r.error.slice(0, 40)}` : ""}
-            {r.status !== "error" && ` · ${timeAgo(r.created_at)}`}
-          </p>
-        </div>
-        <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${s.cls}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-          {s.label}
-        </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            remove(r.id);
-          }}
-          className="shrink-0 rounded-md p-1 text-muted-soft opacity-0 transition hover:text-ink group-hover:opacity-100"
-          aria-label="Remove"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-5">
@@ -242,39 +175,24 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
       {runs.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Contacts" value={runs.length} fill="bg-surface-card" />
-          <Stat label="Ready" value={ready.length} fill="bg-brand-mint" />
+          <Stat label="Ready" value={readyCount} fill="bg-brand-mint" />
           <Stat label="Emails" value={emailCount} fill="bg-brand-peach" />
         </div>
       )}
 
-      {runs.length === 0 && (
+      {runs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-hairline bg-surface-card p-8 text-center">
           <p className="text-sm text-muted">Drop a name + company as you meet people.</p>
           <p className="mt-1 text-xs text-muted-soft">Briefs research in the background and land here.</p>
         </div>
-      )}
-
-      {/* Active items first (flat) */}
-      {inProgress.length > 0 && (
-        <Section title="In progress" count={inProgress.length}>
-          {inProgress.map((r, i) => renderCard(r, i))}
-        </Section>
-      )}
-      {failed.length > 0 && (
-        <Section title="Needs attention" count={failed.length}>
-          {failed.map((r, i) => renderCard(r, inProgress.length + i))}
-        </Section>
-      )}
-
-      {/* Collected contacts — the deck */}
-      {ready.length > 0 && (
+      ) : (
         <div>
-          <div className="flex items-center gap-2 px-1">
+          <div className="mb-3 flex items-center gap-2 px-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted">Your contacts</span>
-            <span className="rounded-full bg-surface-strong px-1.5 text-[10px] font-semibold text-muted">{ready.length}</span>
-            <span className="ml-auto text-[10px] text-muted-soft">scroll · tap a card to open</span>
+            <span className="rounded-full bg-surface-strong px-1.5 text-[10px] font-semibold text-muted">{runs.length}</span>
+            <span className="ml-auto text-[10px] text-muted-soft">tap a ready card to open</span>
           </div>
-          <PeopleStack runs={ready} onOpen={openRun} />
+          <ContactsGrid runs={runs} onOpen={openRun} onRemove={remove} />
         </div>
       )}
     </div>
@@ -286,18 +204,6 @@ function Stat({ label, value, fill }: { label: string; value: number; fill: stri
     <div className={`rounded-lg border border-hairline p-3 text-center ${fill}`}>
       <div className="font-display text-2xl text-ink">{value}</div>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-ink/60">{label}</div>
-    </div>
-  );
-}
-
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted">{title}</span>
-        <span className="rounded-full bg-surface-strong px-1.5 text-[10px] font-semibold text-muted">{count}</span>
-      </div>
-      {children}
     </div>
   );
 }
