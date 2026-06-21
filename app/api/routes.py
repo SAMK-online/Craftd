@@ -34,6 +34,7 @@ from app.services.ocr_service import parse_business_card
 from app.services.persona_service import parse_resume
 from app.services.pipeline import run_pipeline
 from app.services.report_service import generate_report
+from app.services import queue_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -287,6 +288,58 @@ async def find_contacts(query: str = Form(...), count: int = Form(5)):
     """
     contacts = await find_people(query=query, count=count)
     return {"query": query, "count": len(contacts), "contacts": [c.model_dump() for c in contacts]}
+
+
+# ─── Async run queue (event-mode dashboard) ───────────────────────────────────
+
+@router.post("/runs", response_model=None)
+async def enqueue_run(
+    name: str | None = Form(None),
+    company: str | None = Form(None),
+    title: str | None = Form(None),
+    event_name: str | None = Form(None),
+    persona: str | None = Form(None),
+    card_image: UploadFile | None = File(None),
+):
+    """Queue a contact for background processing; returns immediately so the user
+    can capture the next person. The brief populates the dashboard when ready."""
+    card_b64 = None
+    if card_image:
+        raw = await card_image.read()
+        card_b64 = base64.b64encode(raw).decode()
+    try:
+        summary = queue_service.enqueue(
+            name=name,
+            company=company,
+            title=title,
+            event_name=event_name,
+            card_image_base64=card_b64,
+            persona=_parse_persona(persona),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return summary
+
+
+@router.get("/runs", response_model=None)
+async def list_runs():
+    """Dashboard list: all runs with status, newest first."""
+    return {"runs": queue_service.list_runs()}
+
+
+@router.get("/runs/{run_id}", response_model=None)
+async def get_run(run_id: str):
+    """Full run including the report (when ready)."""
+    run = queue_service.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
+
+
+@router.delete("/runs/{run_id}", response_model=None)
+async def delete_run(run_id: str):
+    queue_service.delete_run(run_id)
+    return {"ok": True}
 
 
 @router.post("/persona/resume", response_model=None)

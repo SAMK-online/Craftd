@@ -44,6 +44,24 @@ export interface UserPersona {
   target_roles?: string[];
 }
 
+// A queued/processing/finished run in the event dashboard.
+export type RunStatus = "queued" | "running" | "ready" | "error";
+
+export interface RunSummary {
+  id: string;
+  name: string;
+  company: string;
+  title?: string | null;
+  event_name?: string | null;
+  status: RunStatus;
+  created_at: number;
+  updated_at: number;
+  error?: string | null;
+  enrichment_used?: boolean | null;
+  jobs_found?: number;
+  has_email?: boolean;
+}
+
 // A person discovered via the "Find people" search.
 export interface FoundContact {
   name: string;

@@ -20,3 +20,6 @@ __pycache__/
 .playwright-mcp/
 craftd-*.png
 redesign-*.png
+
+# Async run store
+.craftd_runs.json

@@ -1,6 +1,8 @@
 import type {
   FoundContact,
   GenerateInput,
+  IntelReport,
+  RunSummary,
   StreamEvent,
   StreamEventName,
   UserGoal,
@@ -20,6 +22,39 @@ function buildFormData(input: GenerateInput, persona?: UserPersona | null): Form
   if (input.cardImage) fd.append("card_image", input.cardImage);
   if (persona) fd.append("persona", JSON.stringify(persona));
   return fd;
+}
+
+/** Queue a contact for background processing. Returns immediately. */
+export async function enqueueRun(
+  input: GenerateInput,
+  persona?: UserPersona | null,
+): Promise<RunSummary> {
+  const resp = await fetch(`${API_BASE}/api/runs`, {
+    method: "POST",
+    body: buildFormData(input, persona),
+  });
+  if (!resp.ok) throw new Error(`Could not queue contact (${resp.status})`);
+  return resp.json();
+}
+
+/** List all runs for the dashboard (newest first). */
+export async function listRuns(): Promise<RunSummary[]> {
+  const resp = await fetch(`${API_BASE}/api/runs`, { cache: "no-store" });
+  if (!resp.ok) throw new Error(`Could not load dashboard (${resp.status})`);
+  return (await resp.json()).runs as RunSummary[];
+}
+
+/** Fetch a full run including its report. */
+export async function getRun(
+  id: string,
+): Promise<RunSummary & { report: IntelReport | null }> {
+  const resp = await fetch(`${API_BASE}/api/runs/${id}`, { cache: "no-store" });
+  if (!resp.ok) throw new Error(`Could not load run (${resp.status})`);
+  return resp.json();
+}
+
+export async function deleteRun(id: string): Promise<void> {
+  await fetch(`${API_BASE}/api/runs/${id}`, { method: "DELETE" });
 }
 
 /** Parse a resume PDF into a profile (summary, skills, target roles). */
