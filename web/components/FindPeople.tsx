@@ -105,7 +105,7 @@ export function FindPeople({ onPick }: { onPick: (input: GenerateInput) => void 
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) search();
           }}
           rows={3}
-          placeholder="e.g. Solutions Engineers at Anthropic — or — Heads of Growth at Series B fintechs"
+          placeholder="e.g. Solutions Engineers at Anthropic · Heads of Growth at Series B fintechs · or paste an event link (lu.ma/…)"
           className="w-full resize-none rounded-md border border-hairline bg-canvas px-4 py-3 text-sm text-ink placeholder-muted-soft outline-none transition focus:border-ink"
         />
       </label>

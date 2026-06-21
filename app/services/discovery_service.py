@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 
 import anthropic
 import httpx
@@ -30,6 +31,8 @@ from app.models.pipeline import FoundContact
 logger = logging.getLogger(__name__)
 
 EXA_SEARCH_URL = "https://api.exa.ai/search"
+EXA_CONTENTS_URL = "https://api.exa.ai/contents"
+URL_RE = re.compile(r"https?://[^\s]+")
 
 STRUCTURE_SYSTEM = (
     "You extract structured contact records from web + LinkedIn search results. "
@@ -89,19 +92,65 @@ async def _exa_search(
     return resp.json().get("results", [])
 
 
-async def _structure(query: str, results: list[dict], count: int) -> list[FoundContact]:
+async def _exa_contents(client: httpx.AsyncClient, api_key: str, url: str) -> list[dict]:
+    """Fetch a single page's contents (live-crawled) — for event/link drops."""
+    payload = {
+        "urls": [url],
+        "text": {"maxCharacters": 6000},
+        "livecrawl": "always",
+    }
+    resp = await client.post(
+        EXA_CONTENTS_URL,
+        json=payload,
+        headers={"x-api-key": api_key, "Content-Type": "application/json"},
+        timeout=45.0,
+    )
+    if resp.status_code != 200:
+        logger.warning("Exa contents failed HTTP %s: %s", resp.status_code, resp.text[:200])
+        return []
+    return resp.json().get("results", [])
+
+
+PAGE_PROMPT = """Below is the text of an event/page the user dropped a link to:
+
+{results}
+
+Extract EVERY individual person named on the page:
+- the host(s) — e.g. a line like "Hosted By <name>"
+- speakers/presenters mentioned anywhere (including @handles in the description)
+- any named guests/attendees that are listed
+
+Names may be first-name-only or @handles — include them anyway. Use null for
+title/company when the page doesn't say. Do NOT invent people or treat org names
+(e.g. "Latent.Space") as a person.
+
+Return ONLY a JSON array, hosts/speakers first:
+[
+  {{ "name": "...", "title": null, "company": null, "linkedin_url": null }}
+]
+Max {count}."""
+
+
+async def _structure(
+    query: str, results: list[dict], count: int, page: bool = False
+) -> list[FoundContact]:
     settings = get_settings()
     client = anthropic.AsyncAnthropic(api_key=settings.require_anthropic())
 
     digest = "\n".join(
-        f"- title: {r.get('title','')}\n  url: {r.get('url','')}\n  text: {(r.get('text') or '')[:600]}"
+        f"- title: {r.get('title','')}\n  url: {r.get('url','')}\n  text: {(r.get('text') or '')[: (4000 if page else 600)]}"
         for r in results
+    )
+    prompt = (
+        PAGE_PROMPT.format(results=digest, count=count)
+        if page
+        else STRUCTURE_PROMPT.format(query=query, results=digest, count=count)
     )
     message = await client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2000,
         system=STRUCTURE_SYSTEM,
-        messages=[{"role": "user", "content": STRUCTURE_PROMPT.format(query=query, results=digest, count=count)}],
+        messages=[{"role": "user", "content": prompt}],
     )
     raw = message.content[0].text.strip()
     if raw.startswith("```"):
@@ -128,14 +177,43 @@ async def _structure(query: str, results: list[dict], count: int) -> list[FoundC
     return out
 
 
+async def _find_from_url(url: str, count: int) -> list[FoundContact]:
+    """Drop an event/page link (e.g. lu.ma/...) -> extract the people named on it.
+
+    Note: many event pages (Luma especially) hide their guest list, so this
+    surfaces hosts/speakers/organizers rather than the full attendee roster.
+    """
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient() as client:
+            results = await _exa_contents(client, settings.exa_api_key, url)
+    except httpx.HTTPError as e:
+        logger.error("Exa contents request failed: %s", e)
+        return []
+    if not results:
+        return []
+    try:
+        people = await _structure(url, results, count, page=True)
+    except Exception as e:  # noqa: BLE001
+        logger.error("URL contact structuring failed: %s", e, exc_info=True)
+        return []
+    logger.info("Discovery from URL %s -> %d contacts", url, len(people))
+    return people[:count]
+
+
 async def find_people(query: str, count: int = 5) -> list[FoundContact]:
-    """Discover people matching a free-text query via Exa (general + LinkedIn)."""
+    """Discover people from a free-text query, or from a dropped event/page link."""
     settings = get_settings()
     if not settings.exa_configured:
         logger.warning("Exa not configured - contact discovery unavailable (set EXA_API_KEY)")
         return []
 
     count = max(1, min(count, 15))
+
+    # If the input contains a URL, fetch that page and extract its people.
+    url_match = URL_RE.search(query)
+    if url_match:
+        return await _find_from_url(url_match.group(0).rstrip(".,)"), count)
 
     try:
         async with httpx.AsyncClient() as client:
