@@ -34,7 +34,7 @@ from app.services.ocr_service import parse_business_card
 from app.services.persona_service import parse_resume
 from app.services.pipeline import run_pipeline
 from app.services.report_service import generate_report
-from app.services import queue_service
+from app.services import persona_store, queue_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -294,6 +294,7 @@ async def find_contacts(query: str = Form(...), count: int = Form(5)):
 
 @router.post("/runs", response_model=None)
 async def enqueue_run(
+    device_id: str = Form(...),
     name: str | None = Form(None),
     company: str | None = Form(None),
     title: str | None = Form(None),
@@ -308,7 +309,8 @@ async def enqueue_run(
         raw = await card_image.read()
         card_b64 = base64.b64encode(raw).decode()
     try:
-        summary = queue_service.enqueue(
+        summary = await queue_service.enqueue(
+            device_id=device_id,
             name=name,
             company=company,
             title=title,
@@ -322,24 +324,43 @@ async def enqueue_run(
 
 
 @router.get("/runs", response_model=None)
-async def list_runs():
-    """Dashboard list: all runs with status, newest first."""
-    return {"runs": queue_service.list_runs()}
+async def list_runs(device_id: str):
+    """Dashboard list: this device's runs with status, newest first."""
+    return {"runs": await queue_service.list_runs(device_id)}
 
 
 @router.get("/runs/{run_id}", response_model=None)
-async def get_run(run_id: str):
+async def get_run(run_id: str, device_id: str = ""):
     """Full run including the report (when ready)."""
-    run = queue_service.get_run(run_id)
+    run = await queue_service.get_run(device_id, run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
 
 
 @router.delete("/runs/{run_id}", response_model=None)
-async def delete_run(run_id: str):
-    queue_service.delete_run(run_id)
+async def delete_run(run_id: str, device_id: str = ""):
+    await queue_service.delete_run(device_id, run_id)
     return {"ok": True}
+
+
+# ─── Persona persistence ──────────────────────────────────────────────────────
+
+@router.get("/persona", response_model=None)
+async def get_persona_endpoint(device_id: str):
+    """Load this device's saved persona (None if not onboarded / no DB)."""
+    persona = await persona_store.get_persona(device_id)
+    return {"persona": persona}
+
+
+@router.post("/persona", response_model=None)
+async def save_persona_endpoint(device_id: str = Form(...), persona: str = Form(...)):
+    """Persist this device's persona."""
+    p = _parse_persona(persona)
+    if not p:
+        raise HTTPException(status_code=422, detail="Invalid persona")
+    saved = await persona_store.save_persona(device_id, p.model_dump())
+    return {"saved": saved}
 
 
 @router.post("/persona/resume", response_model=None)

@@ -5,7 +5,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { FindPeople } from "@/components/FindPeople";
 import { Logo } from "@/components/Logo";
 import { Onboarding } from "@/components/Onboarding";
-import { enqueueRun } from "@/lib/api";
+import { enqueueRun, getServerPersona, saveServerPersona } from "@/lib/api";
+import { getDeviceId } from "@/lib/device";
 import { loadPersona, savePersona } from "@/lib/persona";
 import type { GenerateInput, UserPersona } from "@/lib/types";
 
@@ -16,23 +17,35 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>("event");
+  const [deviceId, setDeviceId] = useState("");
 
   useEffect(() => {
-    setPersona(loadPersona());
-    setMounted(true);
+    const id = getDeviceId();
+    setDeviceId(id);
+    (async () => {
+      // Prefer the DB-saved persona; fall back to a local cache.
+      const server = await getServerPersona(id);
+      const p = server ?? loadPersona();
+      if (p) {
+        setPersona(p);
+        savePersona(p); // keep a local cache in sync
+      }
+      setMounted(true);
+    })();
   }, []);
 
   function completeOnboarding(p: UserPersona) {
     savePersona(p);
+    if (deviceId) saveServerPersona(deviceId, p);
     setPersona(p);
     setEditing(false);
   }
 
   // From "Find people": queue the chosen contact, then jump to the dashboard.
   async function pickFromSearch(input: GenerateInput) {
-    if (!persona) return;
+    if (!persona || !deviceId) return;
     try {
-      await enqueueRun(input, persona);
+      await enqueueRun(input, deviceId, persona);
     } catch {
       /* surfaced on the dashboard */
     }
@@ -84,7 +97,11 @@ export default function Home() {
       </div>
 
       <div className="flex-1">
-        {tab === "event" ? <Dashboard persona={persona} /> : <FindPeople onPick={pickFromSearch} />}
+        {tab === "event" ? (
+          <Dashboard persona={persona} deviceId={deviceId} />
+        ) : (
+          <FindPeople onPick={pickFromSearch} />
+        )}
       </div>
 
       <footer className="mt-10 text-center text-[11px] tracking-wide text-muted-soft">

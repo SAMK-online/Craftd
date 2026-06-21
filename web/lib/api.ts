@@ -27,19 +27,21 @@ function buildFormData(input: GenerateInput, persona?: UserPersona | null): Form
 /** Queue a contact for background processing. Returns immediately. */
 export async function enqueueRun(
   input: GenerateInput,
+  deviceId: string,
   persona?: UserPersona | null,
 ): Promise<RunSummary> {
-  const resp = await fetch(`${API_BASE}/api/runs`, {
-    method: "POST",
-    body: buildFormData(input, persona),
-  });
+  const fd = buildFormData(input, persona);
+  fd.append("device_id", deviceId);
+  const resp = await fetch(`${API_BASE}/api/runs`, { method: "POST", body: fd });
   if (!resp.ok) throw new Error(`Could not queue contact (${resp.status})`);
   return resp.json();
 }
 
-/** List all runs for the dashboard (newest first). */
-export async function listRuns(): Promise<RunSummary[]> {
-  const resp = await fetch(`${API_BASE}/api/runs`, { cache: "no-store" });
+/** List this device's runs for the dashboard (newest first). */
+export async function listRuns(deviceId: string): Promise<RunSummary[]> {
+  const resp = await fetch(`${API_BASE}/api/runs?device_id=${encodeURIComponent(deviceId)}`, {
+    cache: "no-store",
+  });
   if (!resp.ok) throw new Error(`Could not load dashboard (${resp.status})`);
   return (await resp.json()).runs as RunSummary[];
 }
@@ -47,14 +49,46 @@ export async function listRuns(): Promise<RunSummary[]> {
 /** Fetch a full run including its report. */
 export async function getRun(
   id: string,
+  deviceId: string,
 ): Promise<RunSummary & { report: IntelReport | null }> {
-  const resp = await fetch(`${API_BASE}/api/runs/${id}`, { cache: "no-store" });
+  const resp = await fetch(
+    `${API_BASE}/api/runs/${id}?device_id=${encodeURIComponent(deviceId)}`,
+    { cache: "no-store" },
+  );
   if (!resp.ok) throw new Error(`Could not load run (${resp.status})`);
   return resp.json();
 }
 
-export async function deleteRun(id: string): Promise<void> {
-  await fetch(`${API_BASE}/api/runs/${id}`, { method: "DELETE" });
+export async function deleteRun(id: string, deviceId: string): Promise<void> {
+  await fetch(`${API_BASE}/api/runs/${id}?device_id=${encodeURIComponent(deviceId)}`, {
+    method: "DELETE",
+  });
+}
+
+/** Load this device's persona from the server (null if none / DB off). */
+export async function getServerPersona(deviceId: string): Promise<UserPersona | null> {
+  try {
+    const resp = await fetch(
+      `${API_BASE}/api/persona?device_id=${encodeURIComponent(deviceId)}`,
+      { cache: "no-store" },
+    );
+    if (!resp.ok) return null;
+    return (await resp.json()).persona as UserPersona | null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist this device's persona to the server. */
+export async function saveServerPersona(deviceId: string, persona: UserPersona): Promise<void> {
+  const fd = new FormData();
+  fd.append("device_id", deviceId);
+  fd.append("persona", JSON.stringify(persona));
+  try {
+    await fetch(`${API_BASE}/api/persona`, { method: "POST", body: fd });
+  } catch {
+    /* non-fatal: localStorage still holds it */
+  }
 }
 
 /** Parse a resume PDF into a profile (summary, skills, target roles). */

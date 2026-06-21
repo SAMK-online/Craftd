@@ -73,6 +73,12 @@ class Settings(BaseSettings):
         default="", description="Prospeo API key for verified-email lookup"
     )
 
+    # ── Database (Supabase / Postgres via PostgREST) ──────────────────────────
+    supabase_url: str = Field(default="", description="Supabase project URL")
+    supabase_key: str = Field(
+        default="", description="Supabase service_role key (backend-only)"
+    )
+
     # ── Contact discovery (Exa Websets) ───────────────────────────────────────
     exa_api_key: str = Field(
         default="", description="Exa API key for Websets contact/list finding"
@@ -106,6 +112,12 @@ class Settings(BaseSettings):
     def exa_configured(self) -> bool:
         """True when Websets contact discovery can run."""
         return bool(self.exa_api_key)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def supabase_configured(self) -> bool:
+        """True when persona + runs persist to Supabase (else local fallback)."""
+        return bool(self.supabase_url and self.supabase_key)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

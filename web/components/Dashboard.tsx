@@ -27,7 +27,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 }
 
-export function Dashboard({ persona }: { persona: UserPersona }) {
+export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceId: string }) {
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
@@ -38,12 +38,13 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
+    if (!deviceId) return;
     try {
-      setRuns(await listRuns());
+      setRuns(await listRuns(deviceId));
     } catch {
       /* transient */
     }
-  }, []);
+  }, [deviceId]);
 
   useEffect(() => {
     refresh();
@@ -57,6 +58,7 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
     try {
       await enqueueRun(
         { name: name.trim(), company: company.trim(), eventName: eventName.trim() || undefined },
+        deviceId,
         persona,
       );
       setName("");
@@ -74,7 +76,7 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
     if (!file) return;
     setBusy(true);
     try {
-      await enqueueRun({ cardImage: file, eventName: eventName.trim() || undefined }, persona);
+      await enqueueRun({ cardImage: file, eventName: eventName.trim() || undefined }, deviceId, persona);
       await refresh();
     } finally {
       setBusy(false);
@@ -84,14 +86,14 @@ export function Dashboard({ persona }: { persona: UserPersona }) {
   async function openRun(r: RunSummary) {
     if (r.status !== "ready") return;
     try {
-      setOpen(await getRun(r.id));
+      setOpen(await getRun(r.id, deviceId));
     } catch {
       /* ignore */
     }
   }
 
   async function remove(id: string) {
-    await deleteRun(id);
+    await deleteRun(id, deviceId);
     setRuns((rs) => rs.filter((r) => r.id !== id));
   }
 
