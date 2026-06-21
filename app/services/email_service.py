@@ -1,20 +1,21 @@
 """
-Email finding via Prospeo.
+Email finding via Prospeo (enrich-person API).
 
-Given a name + company (or, better, the company domain we already learn during
-web research), find a verified work email with a deliverability status.
+Given a name + company (ideally the company domain we learn during web research),
+find a verified work email.
 
-Prospeo Email Finder API:
-  POST https://api.prospeo.io/email-finder
+Prospeo Enrich Person API:
+  POST https://api.prospeo.io/enrich-person
   Headers: X-KEY: <api_key>, Content-Type: application/json
-  Body:    {"first_name": "...", "last_name": "...", "company": "<domain or name>"}
-  Response: {"error": false, "response": {...email + status...}}  (error=true on failure)
+  Body:    {"data": {"first_name","last_name","company_website" | "company_name"},
+            "only_verified_email": true}
+  Response: person.email.{email,status,revealed}  (1 credit charged only when found)
 
-The exact response field names vary, so the parser is tolerant and logs the raw
-payload once so the mapping can be tightened against real data.
+We request verified-only emails and additionally reject any masked / undeliverable
+result, so we never surface an address we can't trust.
 
-Returns None when Prospeo is unconfigured or no email is found, so enrichment
-degrades cleanly.
+Returns None when Prospeo is unconfigured, rate-limited, or no usable email is
+found, so enrichment degrades cleanly.
 """
 from __future__ import annotations
 
@@ -27,10 +28,10 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-PROSPEO_URL = "https://api.prospeo.io/email-finder"
+PROSPEO_URL = "https://api.prospeo.io/enrich-person"
 
-# Prospeo deliverability statuses we consider safe to show / send to.
-ACCEPTABLE_STATUSES = {"VERIFIED", "VALID", "ACCEPT_ALL", "CATCH_ALL", "DELIVERABLE"}
+# Deliverability statuses we accept.
+BAD_STATUSES = {"INVALID", "UNDELIVERABLE", "FAILED", "DO_NOT_EMAIL"}
 
 
 def _split_name(full_name: str) -> tuple[str, str]:
@@ -56,23 +57,18 @@ def domain_from_website(website: str | None) -> str | None:
     return host or None
 
 
-def _extract_email(resp_obj: dict) -> tuple[str, str] | None:
-    """Pull (email, status) out of Prospeo's response object, tolerantly."""
-    email = (
-        resp_obj.get("email")
-        or resp_obj.get("verified_email")
-        or resp_obj.get("work_email")
-    )
-    if not email:
+def _find_person(data: dict) -> dict | None:
+    """Locate the person object across possible response wrappers."""
+    if not isinstance(data, dict):
         return None
-    status = (
-        resp_obj.get("email_status")
-        or resp_obj.get("verification_status")
-        or resp_obj.get("status")
-        or resp_obj.get("deliverability")
-        or "UNKNOWN"
-    )
-    return str(email), str(status).upper()
+    for candidate in (
+        data.get("response", {}).get("person") if isinstance(data.get("response"), dict) else None,
+        data.get("person"),
+        data.get("response"),
+    ):
+        if isinstance(candidate, dict) and "email" in candidate:
+            return candidate
+    return None
 
 
 async def find_email(
@@ -86,12 +82,16 @@ async def find_email(
         return None
 
     first, last = _split_name(name)
-    if not first:
-        return None
+    if not first or not last:
+        return None  # enrich-person needs a full name + company
 
-    # Prospeo accepts a domain or a company name in `company`; prefer the domain.
-    company_field = domain or company
-    payload = {"first_name": first, "last_name": last, "company": company_field}
+    # Identity datapoints go under `data`; options sit alongside it.
+    data_fields: dict = {"first_name": first, "last_name": last}
+    if domain:
+        data_fields["company_website"] = domain
+    else:
+        data_fields["company_name"] = company
+    payload: dict = {"data": data_fields, "only_verified_email": True}
 
     try:
         async with httpx.AsyncClient() as client:
@@ -99,10 +99,22 @@ async def find_email(
                 PROSPEO_URL,
                 json=payload,
                 headers={"X-KEY": settings.prospeo_api_key, "Content-Type": "application/json"},
-                timeout=15.0,
+                timeout=20.0,
             )
+        if resp.status_code == 429:
+            logger.warning("Prospeo rate limit hit for %s @ %s", name, domain or company)
+            return None
         if resp.status_code != 200:
-            logger.warning("Prospeo returned HTTP %s for %s @ %s", resp.status_code, name, company_field)
+            # NO_MATCH is a normal "no verified email found" outcome (not charged).
+            code = ""
+            try:
+                code = str(resp.json().get("error_code", ""))
+            except ValueError:
+                pass
+            if code == "NO_MATCH":
+                logger.info("Prospeo: no verified email for %s @ %s", name, domain or company)
+            else:
+                logger.warning("Prospeo HTTP %s: %s", resp.status_code, resp.text[:200])
             return None
         data = resp.json()
     except httpx.HTTPError as e:
@@ -112,19 +124,22 @@ async def find_email(
         logger.error("Prospeo returned non-JSON response")
         return None
 
-    if data.get("error"):
-        logger.info("Prospeo: no email found for %s @ %s", name, company_field)
+    person = _find_person(data)
+    email_obj = person.get("email") if person else None
+    if not isinstance(email_obj, dict):
+        logger.info("Prospeo: no email for %s @ %s", name, domain or company)
         return None
 
-    resp_obj = data.get("response") or {}
-    if not isinstance(resp_obj, dict):
+    email = email_obj.get("email")
+    status = str(email_obj.get("status") or "UNKNOWN").upper()
+    revealed = email_obj.get("revealed", True)
+
+    # Reject masked, missing, or undeliverable emails.
+    if not email or "*" in email or not revealed or status in BAD_STATUSES:
+        logger.info(
+            "Prospeo email not usable for %s (revealed=%s status=%s)", name, revealed, status
+        )
         return None
 
-    result = _extract_email(resp_obj)
-    if not result:
-        logger.info("Prospeo response had no email field: keys=%s", list(resp_obj.keys()))
-        return None
-
-    email, status = result
-    logger.info("Prospeo found email for %s @ %s (status=%s)", name, company_field, status)
+    logger.info("Prospeo found email for %s @ %s (status=%s)", name, domain or company, status)
     return email, status
