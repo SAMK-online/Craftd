@@ -14,7 +14,7 @@ import asyncio
 import logging
 import time
 
-from app.models.pipeline import ContactInput, PipelineState
+from app.models.pipeline import ContactInput, PipelineState, UserPersona
 from app.services.research_service import enrich_contact
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card, resolve_contact_info
@@ -23,10 +23,14 @@ from app.services.report_service import generate_report
 logger = logging.getLogger(__name__)
 
 
-async def run_pipeline(input_data: ContactInput) -> PipelineState:
+async def run_pipeline(
+    input_data: ContactInput, persona: UserPersona | None = None
+) -> PipelineState:
     """
     Full pipeline: input -> OCR? -> enrich+jobs (parallel) -> report.
     All errors are caught per-stage so the pipeline never fully fails.
+
+    `persona` (the user's profile) drives job-role matching and the report voice.
     """
     state = PipelineState(input=input_data)
 
@@ -63,7 +67,10 @@ async def run_pipeline(input_data: ContactInput) -> PipelineState:
         email=state.parsed_card.email if state.parsed_card else None,
         linkedin_url=state.parsed_card.linkedin_url if state.parsed_card else None,
     )
-    jobs_coro = find_jobs_at_company(company_name=state.resolved_company)
+    jobs_coro = find_jobs_at_company(
+        company_name=state.resolved_company,
+        target_roles=persona.target_roles if persona else None,
+    )
 
     # Run both concurrently
     enrich_result, jobs_result = await asyncio.gather(
@@ -96,6 +103,7 @@ async def run_pipeline(input_data: ContactInput) -> PipelineState:
             enrichment=state.enrichment,
             jobs=state.jobs,
             event_name=input_data.event_name,
+            persona=persona,
         )
     except Exception as e:
         logger.error("Report generation failed: %s", e, exc_info=True)

@@ -3,20 +3,36 @@ import type {
   GenerateInput,
   StreamEvent,
   StreamEventName,
+  UserGoal,
+  UserPersona,
 } from "./types";
 
 // Base URL of the FastAPI backend. Override via NEXT_PUBLIC_API_URL.
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
 
-function buildFormData(input: GenerateInput): FormData {
+function buildFormData(input: GenerateInput, persona?: UserPersona | null): FormData {
   const fd = new FormData();
   if (input.name) fd.append("name", input.name);
   if (input.company) fd.append("company", input.company);
   if (input.title) fd.append("title", input.title);
   if (input.eventName) fd.append("event_name", input.eventName);
   if (input.cardImage) fd.append("card_image", input.cardImage);
+  if (persona) fd.append("persona", JSON.stringify(persona));
   return fd;
+}
+
+/** Parse a resume PDF into a profile (summary, skills, target roles). */
+export async function parseResume(
+  file: File,
+  goal: UserGoal,
+): Promise<{ resume_summary: string; skills: string[]; target_roles: string[] }> {
+  const fd = new FormData();
+  fd.append("resume", file);
+  fd.append("goal", goal);
+  const resp = await fetch(`${API_BASE}/api/persona/resume`, { method: "POST", body: fd });
+  if (!resp.ok) throw new Error(`Resume parsing failed (${resp.status})`);
+  return resp.json();
 }
 
 /**
@@ -30,10 +46,11 @@ export async function streamGenerate(
   input: GenerateInput,
   onEvent: (evt: StreamEvent) => void,
   signal?: AbortSignal,
+  persona?: UserPersona | null,
 ): Promise<void> {
   const resp = await fetch(`${API_BASE}/api/generate/stream`, {
     method: "POST",
-    body: buildFormData(input),
+    body: buildFormData(input, persona),
     signal,
   });
 

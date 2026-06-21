@@ -1,18 +1,21 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CaptureForm } from "@/components/CaptureForm";
 import { FindPeople } from "@/components/FindPeople";
 import { Logo } from "@/components/Logo";
+import { Onboarding } from "@/components/Onboarding";
 import { ProgressStream } from "@/components/ProgressStream";
 import { ResultBrief } from "@/components/ResultBrief";
 import { streamGenerate } from "@/lib/api";
+import { loadPersona, savePersona } from "@/lib/persona";
 import type {
   GenerateInput,
   IntelReport,
   StageKey,
   StageState,
   StreamEvent,
+  UserPersona,
 } from "@/lib/types";
 
 type Phase = "input" | "running" | "result" | "error";
@@ -52,6 +55,22 @@ export default function Home() {
   const [report, setReport] = useState<IntelReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Persona: loaded from localStorage on mount; onboarding shows if absent.
+  const [persona, setPersona] = useState<UserPersona | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setPersona(loadPersona());
+    setMounted(true);
+  }, []);
+
+  function completeOnboarding(p: UserPersona) {
+    savePersona(p);
+    setPersona(p);
+    setEditing(false);
+  }
 
   const patchStage = useCallback((key: StageKey, patch: Partial<StageState>) => {
     setStages((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
@@ -124,7 +143,7 @@ export default function Home() {
     abortRef.current = ctrl;
 
     try {
-      await streamGenerate(input, handleEvent, ctrl.signal);
+      await streamGenerate(input, handleEvent, ctrl.signal, persona);
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
       setError((e as Error).message);
@@ -140,6 +159,20 @@ export default function Home() {
     setStages([]);
   }
 
+  // Avoid a flash before localStorage is read.
+  if (!mounted) return <main className="min-h-[100dvh]" />;
+
+  // First run (or editing) → onboarding.
+  if (!persona || editing) {
+    return (
+      <Onboarding
+        initial={editing ? persona : null}
+        onDone={completeOnboarding}
+        onCancel={editing ? () => setEditing(false) : undefined}
+      />
+    );
+  }
+
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-lg flex-col px-4 py-10">
       <header className="mb-9 flex flex-col items-center text-center">
@@ -150,6 +183,14 @@ export default function Home() {
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-zinc-500 text-balance">
           Meet someone → a warm, researched follow-up before you leave the room.
         </p>
+        <button
+          onClick={() => setEditing(true)}
+          className="glass mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-zinc-400 transition hover:text-zinc-200"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+          {persona.name} · {persona.goal.replace("_", " ")}
+          <span className="text-zinc-600">· edit</span>
+        </button>
       </header>
 
       <div className="flex-1">

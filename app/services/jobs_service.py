@@ -7,17 +7,14 @@ Strategy (in priority order):
 2. Fall back to Apify's LinkedIn Jobs scraper if configured.
 3. Fall back to a basic careers page URL with no role data.
 
-Abu's target roles for matching:
-- Forward Deployed Engineer (FDE)
-- GTM AI Engineer / GTM Engineer
-- Solutions Engineer / Solutions Architect
-- AI Engineer / ML Engineer
-- Technical Account Manager (stretch)
+Target roles come from the user's persona (derived from their resume + goal). If
+none are provided, a broad default keyword set is used.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from urllib.parse import quote
 
 import httpx
@@ -27,51 +24,38 @@ from app.models.pipeline import JobBoardResult, JobMatch
 
 logger = logging.getLogger(__name__)
 
-# Target role keywords - used to score/filter job listings
-TARGET_TITLE_KEYWORDS = [
-    "forward deployed",
-    "gtm engineer",
-    "gtm ai",
-    "solutions engineer",
-    "solutions architect",
-    "ai engineer",
-    "machine learning engineer",
-    "ml engineer",
-    "technical customer success",
-    "customer engineer",
-    "implementation engineer",
-]
-
-DEPRIORITISED_KEYWORDS = [
-    "senior staff", "principal", "director", "vp", "head of",
-    "intern", "data analyst",
+# Fallback keywords when the user's persona has no target roles.
+DEFAULT_KEYWORDS = [
+    "engineer", "manager", "designer", "analyst", "scientist",
+    "developer", "marketing", "product", "intern",
 ]
 
 
-def _is_target_role(title: str) -> bool:
+def _matched_keyword(title: str, keywords: list[str]) -> str | None:
+    """Match a keyword on word boundaries so 'intern' doesn't hit 'international'."""
     title_lower = title.lower()
-    if any(kw in title_lower for kw in DEPRIORITISED_KEYWORDS):
-        return False
-    return any(kw in title_lower for kw in TARGET_TITLE_KEYWORDS)
+    for kw in keywords:
+        if not kw:
+            continue
+        if re.search(rf"\b{re.escape(kw.lower())}\b", title_lower):
+            return kw
+    return None
 
 
-def _fit_reason(title: str, company: str) -> str:
-    """Generate a one-sentence fit reason for a matched role."""
-    title_lower = title.lower()
-    if "forward deployed" in title_lower or "fde" in title_lower:
-        return f"FDE role at {company} aligns with Abu's hands-on AI deployment work at Actfore and hackathon wins."
-    if "gtm" in title_lower:
-        return f"GTM Engineer role at {company} matches Abu's GTMBrain project and customer-facing AI pipeline experience."
-    if "solutions" in title_lower:
-        return f"Solutions Engineer role at {company} fits Abu's pattern of building POCs for enterprise clients."
-    if "ai engineer" in title_lower or "ml engineer" in title_lower:
-        return f"AI/ML Engineer role at {company} maps to Abu's LangGraph, RAG, and multi-agent systems background."
-    return f"This role at {company} matches Abu's technical customer-facing AI engineering profile."
+def _is_target_role(title: str, keywords: list[str]) -> bool:
+    return _matched_keyword(title, keywords) is not None
+
+
+def _fit_reason(title: str, company: str, matched: str | None) -> str:
+    """One-sentence, persona-neutral fit reason (the report LLM refines it)."""
+    if matched:
+        return f"{title} at {company} matches your target ({matched})."
+    return f"{title} at {company} aligns with your background."
 
 
 # ─── ATS Platform Detectors ───────────────────────────────────────────────────
 
-async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str) -> list[JobMatch]:
+async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str, keywords: list[str]) -> list[JobMatch]:
     """
     Greenhouse public API: no auth required.
     Slug is usually the company's lowercase name, e.g. "anthropic", "openai".
@@ -86,7 +70,8 @@ async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str) -> list[
         matches = []
         for job in jobs:
             title = job.get("title", "")
-            if not _is_target_role(title):
+            matched = _matched_keyword(title, keywords)
+            if not matched:
                 continue
             location = ""
             if job.get("offices"):
@@ -98,7 +83,7 @@ async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str) -> list[
                     url=job.get("absolute_url", ""),
                     location=location,
                     description_snippet=(job.get("content") or "")[:300],
-                    fit_reason=_fit_reason(title, company_slug.title()),
+                    fit_reason=_fit_reason(title, company_slug.title(), matched),
                     ats_platform="Greenhouse",
                 )
             )
@@ -108,7 +93,7 @@ async def _try_greenhouse(client: httpx.AsyncClient, company_slug: str) -> list[
         return []
 
 
-async def _try_lever(client: httpx.AsyncClient, company_slug: str) -> list[JobMatch]:
+async def _try_lever(client: httpx.AsyncClient, company_slug: str, keywords: list[str]) -> list[JobMatch]:
     """
     Lever public postings API: no auth required.
     """
@@ -121,7 +106,8 @@ async def _try_lever(client: httpx.AsyncClient, company_slug: str) -> list[JobMa
         matches = []
         for job in jobs:
             title = job.get("text", "")
-            if not _is_target_role(title):
+            matched = _matched_keyword(title, keywords)
+            if not matched:
                 continue
             location = job.get("categories", {}).get("location", "")
             snippet = ""
@@ -136,7 +122,7 @@ async def _try_lever(client: httpx.AsyncClient, company_slug: str) -> list[JobMa
                     url=job.get("hostedUrl", ""),
                     location=location,
                     description_snippet=snippet,
-                    fit_reason=_fit_reason(title, company_slug.title()),
+                    fit_reason=_fit_reason(title, company_slug.title(), matched),
                     ats_platform="Lever",
                 )
             )
@@ -146,7 +132,7 @@ async def _try_lever(client: httpx.AsyncClient, company_slug: str) -> list[JobMa
         return []
 
 
-async def _try_ashby(client: httpx.AsyncClient, company_slug: str) -> list[JobMatch]:
+async def _try_ashby(client: httpx.AsyncClient, company_slug: str, keywords: list[str]) -> list[JobMatch]:
     """
     Ashby public jobs API.
     """
@@ -180,7 +166,8 @@ async def _try_ashby(client: httpx.AsyncClient, company_slug: str) -> list[JobMa
         matches = []
         for job in postings:
             title = job.get("title", "")
-            if not _is_target_role(title):
+            matched = _matched_keyword(title, keywords)
+            if not matched:
                 continue
             location = (
                 job.get("locationName")
@@ -194,7 +181,7 @@ async def _try_ashby(client: httpx.AsyncClient, company_slug: str) -> list[JobMa
                     url=job.get("applicationLink", f"https://jobs.ashbyhq.com/{company_slug}"),
                     location=location,
                     description_snippet=snippet,
-                    fit_reason=_fit_reason(title, company_slug.title()),
+                    fit_reason=_fit_reason(title, company_slug.title(), matched),
                     ats_platform="Ashby",
                 )
             )
@@ -208,6 +195,7 @@ async def _try_apify_linkedin(
     client: httpx.AsyncClient,
     company_name: str,
     api_token: str,
+    keywords: list[str],
 ) -> list[JobMatch]:
     """
     Apify LinkedIn Jobs Scraper as fallback.
@@ -216,7 +204,7 @@ async def _try_apify_linkedin(
     run_url = "https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items"
     params = {"token": api_token, "timeout": 30, "memory": 256}
     payload = {
-        "queries": [f"{company_name} {kw}" for kw in ["solutions engineer AI", "forward deployed engineer"]],
+        "queries": [f"{company_name} {kw}" for kw in (keywords[:2] or ["roles"])],
         "maxResults": 10,
     }
     try:
@@ -228,7 +216,8 @@ async def _try_apify_linkedin(
         matches = []
         for item in items:
             title = item.get("title", "")
-            if not _is_target_role(title):
+            matched = _matched_keyword(title, keywords)
+            if not matched:
                 continue
             matches.append(
                 JobMatch(
@@ -237,7 +226,7 @@ async def _try_apify_linkedin(
                     url=item.get("link") or item.get("url", ""),
                     location=item.get("location", ""),
                     description_snippet=(item.get("description") or "")[:300],
-                    fit_reason=_fit_reason(title, company_name),
+                    fit_reason=_fit_reason(title, company_name, matched),
                     ats_platform="LinkedIn (Apify)",
                 )
             )
@@ -258,24 +247,31 @@ def _slugify(company_name: str) -> str:
 
 # ─── Main entry point ─────────────────────────────────────────────────────────
 
-async def find_jobs_at_company(company_name: str) -> JobBoardResult:
+async def find_jobs_at_company(
+    company_name: str,
+    target_roles: list[str] | None = None,
+) -> JobBoardResult:
     """
     Try all known ATS platforms for a company, return first non-empty result.
     Runs Greenhouse, Lever, Ashby in parallel; falls back to Apify if all empty.
+
+    Roles are matched against `target_roles` (from the user's persona); a broad
+    default keyword set is used when none are provided.
     """
     settings = get_settings()
     slug = _slugify(company_name)
+    keywords = [k for k in (target_roles or []) if k] or DEFAULT_KEYWORDS
 
-    logger.info("Searching jobs at '%s' (slug: %s)", company_name, slug)
+    logger.info("Searching jobs at '%s' (slug: %s) for %d keywords", company_name, slug, len(keywords))
 
     async with httpx.AsyncClient(
         headers={"User-Agent": "Mozilla/5.0 (compatible; EventIntelBot/1.0)"},
         follow_redirects=True,
     ) as client:
         # Try the three main ATS platforms in parallel
-        gh_task = _try_greenhouse(client, slug)
-        lv_task = _try_lever(client, slug)
-        ab_task = _try_ashby(client, slug)
+        gh_task = _try_greenhouse(client, slug, keywords)
+        lv_task = _try_lever(client, slug, keywords)
+        ab_task = _try_ashby(client, slug, keywords)
         results = await asyncio.gather(gh_task, lv_task, ab_task, return_exceptions=True)
 
         all_matches: list[JobMatch] = []
@@ -302,7 +298,7 @@ async def find_jobs_at_company(company_name: str) -> JobBoardResult:
             logger.info("No ATS API results, falling back to Apify for %s", company_name)
             async with httpx.AsyncClient() as apify_client:
                 apify_matches = await _try_apify_linkedin(
-                    apify_client, company_name, settings.apify_api_token
+                    apify_client, company_name, settings.apify_api_token, keywords
                 )
             if apify_matches:
                 return JobBoardResult(

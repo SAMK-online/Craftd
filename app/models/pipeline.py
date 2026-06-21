@@ -9,6 +9,43 @@ from typing import Optional
 from pydantic import BaseModel, Field, HttpUrl
 
 
+# ─── User Persona ─────────────────────────────────────────────────────────────
+
+class UserGoal(str, Enum):
+    INTERNSHIP = "internship"
+    FULL_TIME = "full_time"
+    COLLABORATION = "collaboration"
+    MENTORSHIP = "mentorship"
+
+
+class UserPersona(BaseModel):
+    """Who the user is — drives the report voice, outreach framing, and job match."""
+    name: str = Field(description="The user's own name")
+    position: str = Field(
+        description="Where they are in life, e.g. 'CS senior at GMU' or '2nd-year PM'"
+    )
+    goal: UserGoal = Field(description="What they're seeking from contacts")
+    resume_summary: Optional[str] = Field(
+        None, description="Profile extracted from their resume"
+    )
+    skills: list[str] = Field(default_factory=list)
+    target_roles: list[str] = Field(
+        default_factory=list,
+        description="Role keywords to match jobs against (derived from resume + goal)",
+    )
+
+    def goal_label(self) -> str:
+        return {
+            UserGoal.INTERNSHIP: "an internship",
+            UserGoal.FULL_TIME: "a full-time role",
+            UserGoal.COLLABORATION: "collaboration or partnership",
+            UserGoal.MENTORSHIP: "mentorship and advice",
+        }[self.goal]
+
+    def seeks_jobs(self) -> bool:
+        return self.goal in (UserGoal.INTERNSHIP, UserGoal.FULL_TIME)
+
+
 # ─── Input Models ─────────────────────────────────────────────────────────────
 
 class ContactInput(BaseModel):
@@ -104,7 +141,7 @@ class EnrichmentResult(BaseModel):
 # ─── Job Board Stage ──────────────────────────────────────────────────────────
 
 class JobMatch(BaseModel):
-    """A single job opening that matches Abu's target profile."""
+    """A single job opening that matches the user's target profile."""
     title: str
     company: str
     url: str
@@ -115,7 +152,7 @@ class JobMatch(BaseModel):
         description="First 300 chars of JD, used in outreach"
     )
     fit_reason: str = Field(
-        description="One sentence: why this role matches Abu's background"
+        description="One sentence: why this role matches the user's background"
     )
     ats_platform: Optional[str] = Field(
         None, description="Greenhouse / Lever / Ashby / Workday etc."
@@ -179,7 +216,7 @@ class IntelReport(BaseModel):
 
     top_job_matches: list[JobMatch] = Field(
         default_factory=list,
-        description="Up to 3 open roles at their company that fit Abu's profile"
+        description="Up to 3 open roles at their company that fit the user's profile"
     )
 
     outreach: OutreachDraft

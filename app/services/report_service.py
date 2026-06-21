@@ -24,39 +24,51 @@ from app.models.pipeline import (
     IntelReport,
     JobBoardResult,
     OutreachDraft,
+    UserPersona,
 )
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are an expert networking strategist helping Abdul Shaik (Abu), a Data Engineer
-and AI systems builder in the DMV area, follow up with contacts he meets at tech events.
 
-Abu's background:
-- Data Engineer at Actfore Inc, building automated PHI/PII extraction pipelines
-- MS Computer Science (AI/NLP) from George Mason University, GPA 3.73, graduated 2025
-- Founder of Saasyfy (AI-native B2B SaaS marketplace, accepted into NVIDIA Inception Program)
-- Core projects: VelocityAI (voice-first Socratic DSA tutor, won "Most Technically Impressive"
-  at FIDE x Lovable Hackathon), MindBridge (multi-agent mental health platform, won NVIDIA
-  Agents for Impact Hackathon), GTMBrain (GTM intelligence platform, Claude API + Tavily),
-  AI Receptionist for karate academy (Retell AI, n8n, live in production),
-  Restaurant Management Dual-Agent System (32 tools, AWS Lambda, PostgreSQL)
-- Target roles: Forward Deployed Engineer, GTM AI Engineer, Solutions Engineer, AI Engineer
-- Tech: LangGraph, FastAPI, Python, Next.js, Retell AI, n8n, PostgreSQL, AWS Lambda,
-  Anthropic Claude API, RAG pipelines, multi-agent systems
-- Philosophy: LLMs handle reasoning and NLP; routing, state, scheduling, business logic
-  stay deterministic and testable
+def _build_system_prompt(persona: UserPersona | None) -> str:
+    """Construct the strategist system prompt from the user's persona."""
+    if persona is None:
+        who = "the user"
+        background = ""
+        goal_line = "build a genuine professional relationship"
+    else:
+        who = f"{persona.name} ({persona.position})"
+        bg_parts = []
+        if persona.resume_summary:
+            bg_parts.append(persona.resume_summary)
+        if persona.skills:
+            bg_parts.append("Skills: " + ", ".join(persona.skills[:12]))
+        if persona.target_roles:
+            bg_parts.append("Target roles: " + ", ".join(persona.target_roles[:8]))
+        background = "\n".join(f"- {p}" for p in bg_parts)
+        goal_line = f"find {persona.goal_label()}"
 
-Your task: produce a JSON intelligence brief for Abu to use when following up with a contact.
+    return f"""You are an expert networking strategist helping {who} follow up with
+contacts they meet at events. Their goal in reaching out is to {goal_line}.
+
+The user's background:
+{background or "- (no resume provided)"}
+
+Your task: produce a JSON intelligence brief the user can use to follow up.
 
 Rules:
 - Be specific and concrete, not generic. Reference actual details from the enrichment data.
+- Write the outreach in the user's voice and frame it around their goal ({goal_line}).
 - LinkedIn DM must be under 300 characters. Reference the event where they met.
-- Email should be warm, direct, and reference one specific role from the job matches if available.
-- Talking points should be conversation starters Abu can use naturally, not scripted pitches.
-- If no jobs were found, the outreach should focus on building a relationship, not job hunting.
+- The email should be warm and direct. If a relevant open role is in the job matches,
+  reference that SPECIFIC role; otherwise focus on a genuine connection, not a hard ask.
+- Talking points should be natural conversation starters tied to the user's background.
 - Return ONLY valid JSON, no markdown fences, no preamble."""
 
+
 REPORT_PROMPT_TEMPLATE = """Generate an intelligence brief for this contact.
+
+THE USER (who is reaching out): {user_name}, seeking {goal_label}
 
 CONTACT DATA:
 Name: {name}
@@ -66,7 +78,7 @@ Company: {company}
 ENRICHMENT DATA:
 {enrichment_summary}
 
-JOB MATCHES AT THEIR COMPANY:
+OPEN ROLES AT THEIR COMPANY THAT FIT THE USER:
 {jobs_summary}
 
 EVENT WHERE THEY MET: {event_name}
@@ -75,10 +87,10 @@ Return a JSON object with exactly these keys:
 {{
   "person_summary": "2-3 sentences about who they are and their career trajectory",
   "company_snapshot": "2-3 sentences: what the company does, stage, and any notable recent news or signals",
-  "opportunity_angle": "1-2 sentences: the specific reason Abu should follow up with THIS person (not generic)",
+  "opportunity_angle": "1-2 sentences: the specific reason the user should follow up with THIS person (not generic)",
   "linkedin_dm": "Under 300 chars. First message only. Reference the event. Warm and human.",
   "follow_up_email_subject": "Email subject line",
-  "follow_up_email_body": "Plain text email body. 3-5 short paragraphs. Reference the event, one specific job if available, and a clear ask.",
+  "follow_up_email_body": "Plain text email body. 3-5 short paragraphs. Reference the event, one specific role if available, and a clear ask aligned to the user's goal.",
   "talking_points": ["point 1", "point 2", "point 3"]
 }}"""
 
@@ -149,11 +161,14 @@ async def generate_report(
     enrichment: EnrichmentResult | None,
     jobs: JobBoardResult | None,
     event_name: str | None = None,
+    persona: UserPersona | None = None,
 ) -> IntelReport:
     settings = get_settings()
     client = anthropic.AsyncAnthropic(api_key=settings.require_anthropic())
 
     prompt = REPORT_PROMPT_TEMPLATE.format(
+        user_name=persona.name if persona else "the user",
+        goal_label=persona.goal_label() if persona else "a genuine connection",
         name=name,
         title=title or "Unknown",
         company=company,
@@ -167,7 +182,7 @@ async def generate_report(
     message = await client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2048,
-        system=SYSTEM_PROMPT,
+        system=_build_system_prompt(persona),
         messages=[{"role": "user", "content": prompt}],
     )
 

@@ -32,6 +32,18 @@ export interface IntelReport {
   enrichment_used: boolean;
 }
 
+// The user's own profile, captured at onboarding (persisted in localStorage).
+export type UserGoal = "internship" | "full_time" | "collaboration" | "mentorship";
+
+export interface UserPersona {
+  name: string;
+  position: string;
+  goal: UserGoal;
+  resume_summary?: string | null;
+  skills?: string[];
+  target_roles?: string[];
+}
+
 // A person discovered via the "Find people" search.
 export interface FoundContact {
   name: string;

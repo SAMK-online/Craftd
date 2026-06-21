@@ -20,11 +20,18 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
-from app.models.pipeline import ContactInput, IntelReport, JobBoardResult, ParsedCard
+from app.models.pipeline import (
+    ContactInput,
+    IntelReport,
+    JobBoardResult,
+    ParsedCard,
+    UserPersona,
+)
 from app.services.research_service import enrich_contact
 from app.services.discovery_service import find_people
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card
+from app.services.persona_service import parse_resume
 from app.services.pipeline import run_pipeline
 from app.services.report_service import generate_report
 
@@ -34,14 +41,20 @@ router = APIRouter(prefix="/api")
 
 # ─── Request/Response helpers ─────────────────────────────────────────────────
 
-class PipelineResponse:
-    """Shared shape for pipeline responses."""
-    pass
-
-
 def _sse_event(event: str, data: dict) -> str:
     """Format a Server-Sent Event."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+def _parse_persona(persona_json: str | None) -> UserPersona | None:
+    """Parse the persona JSON form field into a UserPersona (None if absent/invalid)."""
+    if not persona_json:
+        return None
+    try:
+        return UserPersona.model_validate_json(persona_json)
+    except Exception as e:  # noqa: BLE001 - persona is optional, never fatal
+        logger.warning("Could not parse persona: %s", e)
+        return None
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
@@ -57,11 +70,13 @@ async def generate(
     company: str | None = Form(None),
     title: str | None = Form(None),
     event_name: str | None = Form(None),
+    persona: str | None = Form(None),
     card_image: UploadFile | None = File(None),
 ):
     """
     Full pipeline in one call. Returns complete IntelReport JSON.
     Upload either (name + company) or a card_image file, or both.
+    `persona` is the user's profile as a JSON string (drives voice + job match).
     """
     card_b64 = None
     if card_image:
@@ -79,7 +94,7 @@ async def generate(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    state = await run_pipeline(contact)
+    state = await run_pipeline(contact, persona=_parse_persona(persona))
 
     if not state.report:
         raise HTTPException(
@@ -108,6 +123,7 @@ async def generate_stream(
     company: str | None = Form(None),
     title: str | None = Form(None),
     event_name: str | None = Form(None),
+    persona: str | None = Form(None),
     card_image: UploadFile | None = File(None),
 ):
     """
@@ -116,6 +132,7 @@ async def generate_stream(
 
     Use this for the mobile UI so users see progress in real time.
     """
+    user_persona = _parse_persona(persona)
     card_b64 = None
     if card_image:
         raw = await card_image.read()
@@ -178,7 +195,10 @@ async def generate_stream(
             email=parsed_card.email if parsed_card else None,
             linkedin_url=parsed_card.linkedin_url if parsed_card else None,
         )
-        jobs_coro = find_jobs_at_company(company_name=resolved_company)
+        jobs_coro = find_jobs_at_company(
+            company_name=resolved_company,
+            target_roles=user_persona.target_roles if user_persona else None,
+        )
 
         enrichment, jobs_result = await asyncio.gather(
             enrich_coro, jobs_coro, return_exceptions=True
@@ -219,6 +239,7 @@ async def generate_stream(
                 enrichment=enrichment if not isinstance(enrichment, Exception) else None,
                 jobs=jobs_result if isinstance(jobs_result, JobBoardResult) else None,
                 event_name=event_name,
+                persona=user_persona,
             )
             yield _sse_event("stage_complete", {
                 "stage": "report",
@@ -260,9 +281,28 @@ async def jobs_only(company: str = Form(...)):
 
 @router.post("/find", response_model=None)
 async def find_contacts(query: str = Form(...), count: int = Form(5)):
-    """Discover people matching a free-text query via Exa Websets.
+    """Discover people matching a free-text query via Exa Search.
 
     Returns a list of contacts the user can then run through /generate.
     """
     contacts = await find_people(query=query, count=count)
     return {"query": query, "count": len(contacts), "contacts": [c.model_dump() for c in contacts]}
+
+
+@router.post("/persona/resume", response_model=None)
+async def parse_resume_endpoint(resume: UploadFile = File(...), goal: str = Form("full_time")):
+    """Parse a resume PDF into a profile (summary, skills, target roles) for the persona."""
+    from app.models.pipeline import UserGoal
+
+    raw = await resume.read()
+    pdf_b64 = base64.b64encode(raw).decode()
+    try:
+        goal_enum = UserGoal(goal)
+    except ValueError:
+        goal_enum = UserGoal.FULL_TIME
+    try:
+        profile = await parse_resume(pdf_b64, goal_enum)
+        return profile
+    except Exception as e:
+        logger.error("Resume parse failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=422, detail=f"Could not parse resume: {e}")
