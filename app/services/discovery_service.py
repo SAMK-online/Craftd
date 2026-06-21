@@ -1,19 +1,23 @@
 """
 Contact discovery via Exa Search + Claude structuring.
 
-Turns a free-text search ("Solutions Engineers at Anthropic", "Heads of Growth at
-Series B fintechs") into a list of real people with title, company, and LinkedIn.
+Handles two query shapes from one box:
+  - role + company   ("Solutions Engineers at Anthropic")
+  - event / context  ("people at AWS Summit DC 2026", "speakers at SaaStr")
 
-Uses the Exa Search API (pay-as-you-go, available without a Pro plan) with the
-`linkedin profile` category to surface matching profiles, then Claude structures
-the raw results into clean contacts. Email is intentionally NOT fetched here —
-it's resolved later (via Prospeo) when the user crafts a follow-up for a chosen
-person, so discovery stays fast and cheap.
+To cover both, we run two Exa searches in parallel:
+  1. a LinkedIn-profile search (great for role+company)
+  2. a general web search (surfaces event speaker/agenda/sponsor pages, team
+     pages, press — where event people actually live)
+
+Claude then extracts the distinct individuals that match the intent. Email is
+resolved later (Prospeo) when the user crafts a follow-up, keeping discovery fast.
 
 Returns [] when Exa is unconfigured or nothing is found.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -28,35 +32,51 @@ logger = logging.getLogger(__name__)
 EXA_SEARCH_URL = "https://api.exa.ai/search"
 
 STRUCTURE_SYSTEM = (
-    "You extract structured contact records from LinkedIn search results. "
-    "Use only what the results support; never invent people. Return strict JSON."
+    "You extract structured contact records from web + LinkedIn search results. "
+    "Use only people the results actually support; never invent anyone. Return strict JSON."
 )
 
 STRUCTURE_PROMPT = """The user is looking for: "{query}"
 
-Here are LinkedIn profile search results:
+This may be a role+company search OR a search for people tied to an event
+(speakers, panelists, organizers, sponsors, notable attendees). Use these
+web/LinkedIn results to identify the real individuals who match the intent.
+
+RESULTS:
 {results}
 
-Return ONLY a JSON array of the people who match the search intent, most relevant first:
+Return ONLY a JSON array, most relevant first:
 [
   {{
     "name": "Full Name",
-    "title": "their current job title or null",
-    "company": "their current company or null",
-    "linkedin_url": "their linkedin profile url"
+    "title": "current job title or null",
+    "company": "current company or null",
+    "linkedin_url": "linkedin profile url if present in the results, else null"
   }}
 ]
-Skip results that are not individual people (company pages, articles). Max {count}."""
+Rules:
+- Only real, named individuals. Skip company pages, generic listicles, and
+  results where you can't identify a specific person.
+- For event queries, prefer speakers/panelists/organizers/sponsors named in the
+  results.
+- Deduplicate people. Max {count}."""
 
 
-async def _exa_search(client: httpx.AsyncClient, api_key: str, query: str, count: int) -> list[dict]:
-    payload = {
+async def _exa_search(
+    client: httpx.AsyncClient,
+    api_key: str,
+    query: str,
+    count: int,
+    category: str | None = None,
+) -> list[dict]:
+    payload: dict = {
         "query": query,
         "type": "auto",
-        "category": "linkedin profile",
         "numResults": count,
-        "contents": {"text": {"maxCharacters": 600}},
+        "contents": {"text": {"maxCharacters": 1500}},
     }
+    if category:
+        payload["category"] = category
     resp = await client.post(
         EXA_SEARCH_URL,
         json=payload,
@@ -74,12 +94,12 @@ async def _structure(query: str, results: list[dict], count: int) -> list[FoundC
     client = anthropic.AsyncAnthropic(api_key=settings.require_anthropic())
 
     digest = "\n".join(
-        f"- title: {r.get('title','')}\n  url: {r.get('url','')}\n  text: {(r.get('text') or '')[:300]}"
+        f"- title: {r.get('title','')}\n  url: {r.get('url','')}\n  text: {(r.get('text') or '')[:600]}"
         for r in results
     )
     message = await client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1500,
+        max_tokens=2000,
         system=STRUCTURE_SYSTEM,
         messages=[{"role": "user", "content": STRUCTURE_PROMPT.format(query=query, results=digest, count=count)}],
     )
@@ -109,7 +129,7 @@ async def _structure(query: str, results: list[dict], count: int) -> list[FoundC
 
 
 async def find_people(query: str, count: int = 5) -> list[FoundContact]:
-    """Discover people matching a free-text query via Exa Search."""
+    """Discover people matching a free-text query via Exa (general + LinkedIn)."""
     settings = get_settings()
     if not settings.exa_configured:
         logger.warning("Exa not configured - contact discovery unavailable (set EXA_API_KEY)")
@@ -119,10 +139,26 @@ async def find_people(query: str, count: int = 5) -> list[FoundContact]:
 
     try:
         async with httpx.AsyncClient() as client:
-            results = await _exa_search(client, settings.exa_api_key, query, count)
+            general, profiles = await asyncio.gather(
+                _exa_search(client, settings.exa_api_key, query, max(count * 2, 8)),
+                _exa_search(client, settings.exa_api_key, query, count, category="linkedin profile"),
+                return_exceptions=True,
+            )
     except httpx.HTTPError as e:
         logger.error("Exa search request failed: %s", e)
         return []
+
+    # Merge results, dedupe by url.
+    seen: set[str] = set()
+    results: list[dict] = []
+    for batch in (profiles, general):
+        if isinstance(batch, list):
+            for r in batch:
+                url = r.get("url", "")
+                if url and url in seen:
+                    continue
+                seen.add(url)
+                results.append(r)
 
     if not results:
         return []
@@ -133,5 +169,5 @@ async def find_people(query: str, count: int = 5) -> list[FoundContact]:
         logger.error("Contact structuring failed: %s", e, exc_info=True)
         return []
 
-    logger.info("Discovery '%s' -> %d contacts", query, len(people))
+    logger.info("Discovery '%s' -> %d contacts (from %d results)", query, len(people), len(results))
     return people[:count]
