@@ -32,6 +32,7 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [eventName, setEventName] = useState("");
+  const [context, setContext] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<(RunSummary & { report: IntelReport | null }) | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -57,12 +58,18 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
     setBusy(true);
     try {
       await enqueueRun(
-        { name: name.trim(), company: company.trim(), eventName: eventName.trim() || undefined },
+        {
+          name: name.trim(),
+          company: company.trim(),
+          eventName: eventName.trim() || undefined,
+          context: context.trim() || undefined,
+        },
         deviceId,
         persona,
       );
       setName("");
       setCompany("");
+      setContext("");
       await refresh();
       nameRef.current?.focus(); // ready for the next person
     } catch {
@@ -221,6 +228,13 @@ export function Dashboard({ persona, deviceId }: { persona: UserPersona; deviceI
           onChange={(e) => setEventName(e.target.value)}
           placeholder="Event (optional, stays for the session)"
           className="mt-2 h-9 w-full rounded-md border border-hairline bg-canvas px-3 text-xs text-ink placeholder-muted-soft outline-none focus:border-ink"
+        />
+        <textarea
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+          rows={2}
+          placeholder="Context / notes (optional) — e.g. hiring an FDE; we talked about RAG eval"
+          className="mt-2 w-full resize-none rounded-md border border-hairline bg-canvas px-3 py-2 text-xs text-ink placeholder-muted-soft outline-none focus:border-ink"
         />
       </div>
 

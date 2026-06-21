@@ -83,6 +83,9 @@ OPEN ROLES AT THEIR COMPANY THAT FIT THE USER:
 
 EVENT WHERE THEY MET: {event_name}
 
+NOTES FROM THE CONVERSATION (the strongest personal signal — weave these in naturally):
+{context}
+
 Return a JSON object with exactly these keys:
 {{
   "person_summary": "2-3 sentences about who they are and their career trajectory",
@@ -162,6 +165,7 @@ async def generate_report(
     jobs: JobBoardResult | None,
     event_name: str | None = None,
     persona: UserPersona | None = None,
+    context: str | None = None,
 ) -> IntelReport:
     settings = get_settings()
     client = anthropic.AsyncAnthropic(api_key=settings.require_anthropic())
@@ -175,6 +179,7 @@ async def generate_report(
         enrichment_summary=_build_enrichment_summary(enrichment),
         jobs_summary=_build_jobs_summary(jobs),
         event_name=event_name or "a tech event",
+        context=context.strip() if context and context.strip() else "(none provided)",
     )
 
     logger.info("Generating intel report for %s @ %s", name, company)

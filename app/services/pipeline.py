@@ -104,6 +104,7 @@ async def run_pipeline(
             jobs=state.jobs,
             event_name=input_data.event_name,
             persona=persona,
+            context=input_data.context,
         )
     except Exception as e:
         logger.error("Report generation failed: %s", e, exc_info=True)

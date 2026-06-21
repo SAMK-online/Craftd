@@ -19,6 +19,7 @@ function buildFormData(input: GenerateInput, persona?: UserPersona | null): Form
   if (input.company) fd.append("company", input.company);
   if (input.title) fd.append("title", input.title);
   if (input.eventName) fd.append("event_name", input.eventName);
+  if (input.context) fd.append("context", input.context);
   if (input.cardImage) fd.append("card_image", input.cardImage);
   if (persona) fd.append("persona", JSON.stringify(persona));
   return fd;

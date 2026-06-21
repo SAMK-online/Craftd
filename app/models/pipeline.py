@@ -59,6 +59,11 @@ class ContactInput(BaseModel):
     event_name: Optional[str] = Field(
         None, description="Event where you met them, used to personalise outreach"
     )
+    context: Optional[str] = Field(
+        None,
+        description="Free notes from the conversation or hints (e.g. a role they're "
+        "hiring for, shared interests) — woven into the outreach",
+    )
 
     def model_post_init(self, __context) -> None:
         if not self.card_image_base64 and not (self.name and self.company):

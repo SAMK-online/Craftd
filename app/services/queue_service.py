@@ -117,6 +117,7 @@ async def enqueue(
     company: Optional[str],
     title: Optional[str],
     event_name: Optional[str],
+    context: Optional[str],
     card_image_base64: Optional[str],
     persona: UserPersona | None,
 ) -> dict:
@@ -126,6 +127,7 @@ async def enqueue(
         title=title,
         card_image_base64=card_image_base64,
         event_name=event_name,
+        context=context,
     )
     run_id = uuid.uuid4().hex[:12]
     now = time.time()

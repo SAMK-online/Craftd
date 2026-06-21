@@ -299,6 +299,7 @@ async def enqueue_run(
     company: str | None = Form(None),
     title: str | None = Form(None),
     event_name: str | None = Form(None),
+    context: str | None = Form(None),
     persona: str | None = Form(None),
     card_image: UploadFile | None = File(None),
 ):
@@ -315,6 +316,7 @@ async def enqueue_run(
             company=company,
             title=title,
             event_name=event_name,
+            context=context,
             card_image_base64=card_b64,
             persona=_parse_persona(persona),
         )

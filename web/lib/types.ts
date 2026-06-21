@@ -77,6 +77,7 @@ export interface GenerateInput {
   company?: string;
   title?: string;
   eventName?: string;
+  context?: string;
   cardImage?: File | null;
 }
 
