@@ -153,6 +153,28 @@ web/                 Next.js frontend
 
 ---
 
+## Responsible use
+
+Craft'd researches real people and can surface verified emails, so use it like a
+considerate human, not a spam cannon:
+
+- **Built for warm follow-ups** — people you actually met (a card, a conversation).
+  That's the intended, consent-adjacent use.
+- **It's a tool, not a free pass.** A data source being legal doesn't make every
+  use of it okay. Cold-emailing strangers can implicate **CAN-SPAM (US)** and
+  **GDPR/PECR (EU)** regardless of where the address came from.
+- **Review before you send.** Every draft is yours to edit — keep messages honest;
+  don't imply familiarity that isn't real.
+- **Honor "no."** Don't contact people who've opted out, and don't mass-blast.
+- **"Find people" is for research/intros**, not building a cold-email list.
+- **Personal vs. commercial.** Personal, low-volume, self-hosted use is low-risk.
+  If you host it for others or send at scale, add a privacy policy, a lawful basis,
+  data-deletion handling, and email opt-outs — and talk to counsel.
+
+You bring the keys and run your own instance; you own how it's used.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
