@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@paper-design/shaders-react": "^0.0.76",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
     "motion": "^12.40.0",
     "next": "14.2.35",
     "react": "^18",

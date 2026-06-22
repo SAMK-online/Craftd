@@ -112,6 +112,19 @@ export function ResultBrief({ report, onReset }: { report: IntelReport; onReset:
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           {/* Left: short pieces */}
           <div className="space-y-4">
+            {o.event_followup && (
+              <Card
+                tone="teal"
+                title="Event follow-up"
+                icon={<IconWave />}
+                action={<CopyButton text={o.event_followup} />}
+              >
+                <p className="whitespace-pre-wrap rounded-lg border border-hairline bg-canvas p-3.5 text-[15px] leading-relaxed text-body">
+                  {o.event_followup}
+                </p>
+                <p className="mt-1.5 text-[11px] text-muted-soft">Warm, no-ask note to stay in touch.</p>
+              </Card>
+            )}
             <Card tone="pink" title="LinkedIn DM" icon={<IconChat />} action={<CopyButton text={o.linkedin_dm} />}>
               <p className="whitespace-pre-wrap rounded-lg border border-hairline bg-canvas p-3.5 text-[15px] leading-relaxed text-body">
                 {o.linkedin_dm}
@@ -253,3 +266,4 @@ const IconChat = () => (<svg {...ic} aria-hidden><path d="M4 5h16v11H9l-4 3.5V16
 const IconMail = () => (<svg {...ic} aria-hidden><rect x="3" y="5" width="18" height="14" rx="2" {...st} /><path d="m4 7 8 6 8-6" {...st} /></svg>);
 const IconList = () => (<svg {...ic} aria-hidden><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" {...st} /></svg>);
 const IconArrow = () => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" {...st} /></svg>);
+const IconWave = () => (<svg {...ic} aria-hidden><path d="M7 11V6.5a1.5 1.5 0 0 1 3 0V10m0-1V5a1.5 1.5 0 0 1 3 0v5m0-2.5a1.5 1.5 0 0 1 3 0V13c0 3.3-2.7 6-6 6s-6-2.4-6-5l-1.5-2.6a1.4 1.4 0 0 1 2.3-1.6L7 11" {...st} /></svg>);

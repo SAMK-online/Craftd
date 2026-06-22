@@ -94,7 +94,8 @@ Return a JSON object with exactly these keys:
   "linkedin_dm": "Under 300 chars. First message only. Reference the event. Warm and human.",
   "follow_up_email_subject": "Email subject line",
   "follow_up_email_body": "Plain text email body. 3-5 short paragraphs. Reference the event, one specific role if available, and a clear ask aligned to the user's goal.",
-  "talking_points": ["point 1", "point 2", "point 3"]
+  "talking_points": ["point 1", "point 2", "point 3"],
+  "event_followup": "If an event is named above OR the notes describe meeting/talking in person, you MUST write this: a short (2-3 sentence) warm, no-ask note to simply stay in touch — e.g. 'Really enjoyed chatting about X at <event> — would love to keep in touch.' Absolutely NO pitch, NO ask, NO mention of roles/jobs; reference a specific detail from the conversation. Use null ONLY when there is no event and no in-person conversation signal at all."
 }}"""
 
 
@@ -208,11 +209,13 @@ async def generate_report(
         logger.error("Report generation returned non-JSON: %s", raw[:500])
         raise ValueError(f"Report JSON parse failed: {e}") from e
 
+    ef = data.get("event_followup")
     outreach = OutreachDraft(
         linkedin_dm=data["linkedin_dm"],
         follow_up_email_subject=data["follow_up_email_subject"],
         follow_up_email_body=data["follow_up_email_body"],
         talking_points=data.get("talking_points", []),
+        event_followup=ef.strip() if isinstance(ef, str) and ef.strip() else None,
     )
 
     return IntelReport(

@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
   variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "Craft'd",
-  description:
-    "Meet someone at an event → a warm, researched follow-up before you leave the room.",
+  description: "Event networking briefs and outreach drafts.",
 };
 
 export default function RootLayout({
@@ -21,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+      <body className={`${geistSans.variable} antialiased`}>{children}</body>
     </html>
   );
 }

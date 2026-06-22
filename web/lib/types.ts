@@ -17,6 +17,7 @@ export interface OutreachDraft {
   follow_up_email_subject: string;
   follow_up_email_body: string;
   talking_points: string[];
+  event_followup?: string | null;
 }
 
 export interface IntelReport {

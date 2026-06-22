@@ -199,6 +199,11 @@ class OutreachDraft(BaseModel):
     talking_points: list[str] = Field(
         description="3–5 bullet points for a follow-up conversation"
     )
+    event_followup: Optional[str] = Field(
+        None,
+        description="Warm, no-ask 'great chatting, let's stay in touch' note — only "
+        "when they were met at an event / the notes describe a conversation",
+    )
 
 
 class IntelReport(BaseModel):
