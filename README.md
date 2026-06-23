@@ -4,7 +4,7 @@
 
 Craft'ed is a self-hosted networking tool. At an event you drop a name + company (or snap a business card), and it runs in the background to produce a researched intel brief — who they are, their company, why to follow up, open roles that fit *you*, a verified email, and ready-to-send LinkedIn DM + follow-up email. Briefs land on a dashboard so you can capture the next person without waiting.
 
-It's **bring-your-own-keys**: clone it, drop in your API keys, run it locally. Everything degrades gracefully — the only key you truly need is Anthropic.
+It's **bring-your-own-keys**: clone it, add your API keys, and run it locally with `docker compose up` or [deploy it](DEPLOY.md) to use from your phone at an event. Every integration degrades gracefully — the only key you truly need is Anthropic.
 
 ---
 
