@@ -13,8 +13,9 @@ __pycache__/
 # OS / editor
 .DS_Store
 
-# Local agent settings
-.claude/
+# Local agent settings (keep private) — but ship the shareable skills/
+.claude/*
+!.claude/skills/
 
 # Test artifacts
 .playwright-mcp/

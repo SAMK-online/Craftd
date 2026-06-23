@@ -93,8 +93,20 @@ class Settings(BaseSettings):
         default="development", description="Deployment environment"
     )
     log_level: str = Field(default="INFO", description="Root log level")
+    cors_origins: str = Field(
+        default="",
+        description="Comma-separated browser origins allowed to call the API in "
+        "non-development envs (e.g. https://your-frontend.onrender.com). In "
+        "development all origins are allowed and this is ignored.",
+    )
 
     # ── Derived gates the services branch on ──────────────────────────────────
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Allowed CORS origins as a list, parsed from the comma-separated env."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def apify_configured(self) -> bool:

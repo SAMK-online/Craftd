@@ -85,6 +85,37 @@ npm run dev
 
 Open **http://localhost:3000**.
 
+### Or run both with Docker (one command)
+```bash
+cp .env.example .env                  # add ANTHROPIC_API_KEY (others optional)
+docker compose up --build             # API on :8000, web on :3000
+```
+Open **http://localhost:3000**.
+
+---
+
+## Deploy (use it at an event)
+
+`docker compose` and the local steps above run on **localhost** — fine for trying
+it, but to actually use Craft'd at an event you're on your **phone**, which can't
+reach your laptop's localhost. For that, deploy the two services (API + web) to a
+host with HTTPS.
+
+The code is deploy-ready: the API binds to the host's `$PORT`, and CORS is driven
+by `CORS_ORIGINS`. **See [DEPLOY.md](DEPLOY.md)** for step-by-step **Render** and
+**Railway** recipes, including the two things that trip people up:
+
+- `NEXT_PUBLIC_API_URL` (the web app's pointer to the API) is **baked in at build
+  time** — change it and the web service must *rebuild*.
+- `CORS_ORIGINS` on the API must list your web URL exactly (scheme + host, no
+  trailing slash), or the browser blocks every request.
+
+> **Using Claude Code?** Run `/deploy` in the repo — the bundled skill
+> (`.claude/skills/deploy/`) walks the whole deploy interactively and verifies it.
+
+For deployed events, also set `SUPABASE_URL` + `SUPABASE_KEY` (see below) so
+captured contacts survive redeploys — the local fallback is ephemeral in a container.
+
 ---
 
 ## Keys (bring your own)
