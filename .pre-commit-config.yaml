@@ -1,0 +1,10 @@
+# Optional local guard: blocks secrets before they're committed.
+# Setup (once):  pip install pre-commit && pre-commit install
+# Then it runs automatically on every `git commit`.
+# CI (.github/workflows/secret-scan.yml) enforces the same check regardless.
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

@@ -63,7 +63,10 @@ web/components/     UI; web/lib/ API client + helpers
 
 1. Fork → branch (`feat/...` or `fix/...`).
 2. Make sure it builds: backend `python -m compileall app`, frontend `npm run build`.
-3. **Never commit secrets** — `.env` is gitignored; double-check your diff.
+3. **Never commit secrets** — `.env` is gitignored; double-check your diff. CI runs
+   [gitleaks](https://github.com/gitleaks/gitleaks) on every push/PR and will fail
+   the check if a key slips in. To catch it locally before committing, install the
+   optional hook: `pip install pre-commit && pre-commit install`.
 4. Open a PR describing the change and how you tested it.
 
 ## Reporting bugs

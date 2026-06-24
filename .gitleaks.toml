@@ -1,0 +1,16 @@
+# gitleaks config for Craft'd.
+# Uses gitleaks' built-in rules (Anthropic, Supabase JWT, generic high-entropy,
+# etc.) and only allowlists the placeholder template files so the example keys
+# (sk-ant-..., apify_api_..., your-service-role-key) don't trip the scan.
+
+title = "Craft'd gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Template/example files contain placeholders, not real secrets"
+paths = [
+  '''\.env\.example$''',
+  '''web/\.env\.example$''',
+]
