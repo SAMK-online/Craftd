@@ -155,9 +155,16 @@ create table if not exists runs (
   updated_at double precision default extract(epoch from now())
 );
 create index if not exists runs_device_idx on runs (device_id, created_at desc);
+
+-- Enable Row Level Security with no policies. The backend uses the service_role
+-- key, which bypasses RLS, so the app keeps working — but this blocks the public
+-- anon key from reading/writing these tables (which hold names, emails, and
+-- reports). Without this, Supabase warns and the data is exposed via its API.
+alter table personas enable row level security;
+alter table runs        enable row level security;
 ```
 
-> The backend uses the `service_role` key (backend-only, never sent to the browser). For a shared multi-user deployment you'd add Supabase Auth + Row-Level Security.
+> The backend uses the `service_role` key (backend-only, never sent to the browser), which bypasses RLS — so RLS-on with no policies keeps the app working while locking out the public anon key. For a shared multi-user deployment you'd instead add Supabase Auth + device/user-scoped RLS policies.
 
 ---
 
