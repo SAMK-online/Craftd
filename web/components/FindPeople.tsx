@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { findPeople } from "@/lib/api";
 import type { FoundContact, GenerateInput } from "@/lib/types";
 
@@ -9,18 +9,29 @@ type FindPhase = "input" | "searching" | "results";
 const AVATAR_TONES = ["bg-brand-pink", "bg-brand-teal", "bg-brand-lavender", "bg-brand-peach", "bg-brand-ochre", "bg-brand-mint"];
 const DARK_TONES = new Set(["bg-brand-pink", "bg-brand-teal"]);
 
-export function FindPeople({ onPick }: { onPick: (input: GenerateInput) => void }) {
+export function FindPeople({
+  onPick,
+  seedQuery,
+  onSeedConsumed,
+}: {
+  onPick: (input: GenerateInput) => void;
+  // When set (e.g. an event URL from the Events tab), pre-fill and auto-search.
+  seedQuery?: string | null;
+  onSeedConsumed?: () => void;
+}) {
   const [phase, setPhase] = useState<FindPhase>("input");
   const [query, setQuery] = useState("");
   const [contacts, setContacts] = useState<FoundContact[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function search() {
-    if (!query.trim()) return;
+  async function search(q?: string) {
+    const term = (q ?? query).trim();
+    if (!term) return;
+    setQuery(term);
     setPhase("searching");
     setError(null);
     try {
-      const found = await findPeople(query.trim(), 6);
+      const found = await findPeople(term, 6);
       setContacts(found);
       setPhase("results");
     } catch (e) {
@@ -28,6 +39,15 @@ export function FindPeople({ onPick }: { onPick: (input: GenerateInput) => void 
       setPhase("input");
     }
   }
+
+  // A seed handed in from another tab (the event page URL) auto-runs once.
+  useEffect(() => {
+    if (seedQuery) {
+      onSeedConsumed?.();
+      search(seedQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedQuery]);
 
   if (phase === "searching") {
     return (
@@ -118,7 +138,7 @@ export function FindPeople({ onPick }: { onPick: (input: GenerateInput) => void 
       </label>
       {error && <p className="text-xs text-brand-coral">{error}</p>}
       <button
-        onClick={search}
+        onClick={() => search()}
         disabled={!query.trim()}
         className="w-full rounded-md bg-ink px-4 py-3.5 text-base font-semibold text-on-primary transition hover:bg-body-strong active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-surface-strong disabled:text-muted-soft"
       >

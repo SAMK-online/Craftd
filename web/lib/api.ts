@@ -1,5 +1,6 @@
 import type {
   FoundContact,
+  FoundEvent,
   GenerateInput,
   IntelReport,
   RunSummary,
@@ -172,6 +173,27 @@ export async function findPeople(
   if (!resp.ok) throw new Error(`Search failed (${resp.status})`);
   const json = await resp.json();
   return (json.contacts ?? []) as FoundContact[];
+}
+
+/** Discover upcoming events in a vertical (Exa Search + Claude). */
+export async function findEvents(
+  vertical: string,
+  location?: string,
+  count = 6,
+  signal?: AbortSignal,
+): Promise<FoundEvent[]> {
+  const fd = new FormData();
+  fd.append("vertical", vertical);
+  if (location) fd.append("location", location);
+  fd.append("count", String(count));
+  const resp = await fetch(`${API_BASE}/api/events`, {
+    method: "POST",
+    body: fd,
+    signal,
+  });
+  if (!resp.ok) throw new Error(`Search failed (${resp.status})`);
+  const json = await resp.json();
+  return (json.events ?? []) as FoundEvent[];
 }
 
 function parseFrame(frame: string): StreamEvent | null {

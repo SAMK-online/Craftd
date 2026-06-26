@@ -3,13 +3,20 @@
 import { useEffect, useState } from "react";
 import { Dashboard } from "@/components/Dashboard";
 import { FindPeople } from "@/components/FindPeople";
+import { FindEvents } from "@/components/FindEvents";
 import { Onboarding } from "@/components/Onboarding";
 import { enqueueRun, getServerPersona, saveServerPersona } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import { loadPersona, savePersona } from "@/lib/persona";
 import type { GenerateInput, UserPersona } from "@/lib/types";
 
-type Tab = "event" | "find";
+type Tab = "event" | "find" | "events";
+
+const TAB_LABELS: Record<Tab, string> = {
+  event: "Dashboard",
+  find: "People",
+  events: "Events",
+};
 
 export function AppShell() {
   const [persona, setPersona] = useState<UserPersona | null>(null);
@@ -17,6 +24,8 @@ export function AppShell() {
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>("event");
   const [deviceId, setDeviceId] = useState("");
+  // Event page URL handed from the Events tab to "People" to auto-search.
+  const [peopleSeed, setPeopleSeed] = useState<string | null>(null);
 
   useEffect(() => {
     const id = getDeviceId();
@@ -54,6 +63,12 @@ export function AppShell() {
     setTab("event");
   }
 
+  // From "Events": jump to the People tab pre-seeded with the event page URL.
+  function findPeopleForEvent(eventUrl: string) {
+    setPeopleSeed(eventUrl);
+    setTab("find");
+  }
+
   if (!mounted) return <main className="min-h-[100dvh]" />;
 
   if (!persona || editing) {
@@ -85,7 +100,7 @@ export function AppShell() {
       </header>
 
       <div className="mb-5 flex rounded-md border border-hairline bg-surface-card p-1">
-        {(["event", "find"] as Tab[]).map((t) => (
+        {(["event", "find", "events"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -93,17 +108,21 @@ export function AppShell() {
               tab === t ? "bg-canvas text-ink shadow-sm" : "text-muted hover:text-body-strong"
             }`}
           >
-            {t === "event" ? "Dashboard" : "Find people"}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
       <div className="flex-1">
-        {tab === "event" ? (
-          <Dashboard persona={persona} deviceId={deviceId} />
-        ) : (
-          <FindPeople onPick={pickFromSearch} />
+        {tab === "event" && <Dashboard persona={persona} deviceId={deviceId} />}
+        {tab === "find" && (
+          <FindPeople
+            onPick={pickFromSearch}
+            seedQuery={peopleSeed}
+            onSeedConsumed={() => setPeopleSeed(null)}
+          />
         )}
+        {tab === "events" && <FindEvents onFindPeople={findPeopleForEvent} />}
       </div>
 
       <footer className="mt-10 text-center text-[11px] tracking-wide text-muted-soft">

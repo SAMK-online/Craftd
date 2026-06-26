@@ -14,6 +14,7 @@ It's **bring-your-own-keys**: clone it, add your API keys, and run it locally wi
 - **Persona-driven** — onboard once (name, goal, resume); every brief, DM, and job match is tailored to *you* (internship / full-time / collaboration / mentorship)
 - **Live research** — person + company researched from the web (Tavily), not a stale database
 - **Find people** — search "Solutions Engineers at Anthropic" or "speakers at AWS Summit" → discover contacts, then craft a follow-up
+- **Find events** — name a vertical ("AI infrastructure", "climate tech") + optional location → discover upcoming conferences/summits, then jump straight into finding the people who'll be there
 - **Job matching** — scans the contact's company (Greenhouse/Lever/Ashby) for roles that fit your resume, with description briefs + apply links
 - **Verified emails** — finds a deliverable work email (Prospeo)
 - **Ready-to-send outreach** — LinkedIn DM (<300 chars), follow-up email, talking points
@@ -127,7 +128,7 @@ Only **Anthropic is required**. Each other key unlocks a feature; without it tha
 | `ANTHROPIC_API_KEY` | **Yes** | Card OCR + brief/DM/email generation | [console.anthropic.com](https://console.anthropic.com) |
 | `TAVILY_API_KEY` | No | Live person/company research (else public data only) | [tavily.com](https://tavily.com) (free tier) |
 | `PROSPEO_API_KEY` | No | Verified email lookup | [prospeo.io](https://prospeo.io) (free tier) |
-| `EXA_API_KEY` | No | "Find people" discovery | [exa.ai](https://exa.ai) (pay-as-you-go) |
+| `EXA_API_KEY` | No | "Find people" + "Find events" discovery | [exa.ai](https://exa.ai) (pay-as-you-go) |
 | `APIFY_API_TOKEN` | No | LinkedIn job fallback (off-ATS companies) | [apify.com](https://apify.com) |
 | `SUPABASE_URL` + `SUPABASE_KEY` | No | Persist persona + contacts (else local fallback) | see below |
 
@@ -174,7 +175,7 @@ alter table runs        enable row level security;
 app/                 FastAPI backend
   api/routes.py      endpoints
   models/pipeline.py typed pipeline models
-  services/          ocr · research · jobs · email · discovery · report · queue
+  services/          ocr · research · jobs · email · discovery · events · report · queue
 web/                 Next.js frontend
   app/page.tsx       dashboard + onboarding
   components/        Dashboard, ResultBrief, FindPeople, Onboarding, ...

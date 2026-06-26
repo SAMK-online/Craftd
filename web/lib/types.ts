@@ -72,6 +72,15 @@ export interface FoundContact {
   email?: string | null;
 }
 
+// An event discovered via the vertical "Events" search.
+export interface FoundEvent {
+  name: string;
+  date?: string | null;
+  location?: string | null;
+  url?: string | null;
+  description?: string | null;
+}
+
 // Input the user provides to kick off the pipeline.
 export interface GenerateInput {
   name?: string;

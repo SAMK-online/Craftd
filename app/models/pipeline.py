@@ -185,6 +185,22 @@ class FoundContact(BaseModel):
     email: Optional[str] = None
 
 
+# ─── Event Discovery (vertical-specific) ──────────────────────────────────────
+
+class FoundEvent(BaseModel):
+    """An event discovered for a vertical, before any contact is crafted.
+
+    Dates/locations are kept as the human strings found on the web rather than
+    parsed timestamps — they go straight into the UI and into a Find-people
+    handoff (the event page URL), so normalising buys nothing.
+    """
+    name: str
+    date: Optional[str] = None        # e.g. "March 12–14, 2026", or null
+    location: Optional[str] = None    # e.g. "San Francisco, CA" / "Virtual"
+    url: Optional[str] = None         # event/agenda page (feeds Find people)
+    description: Optional[str] = None  # one line: what it is / why it fits
+
+
 # ─── Report Generation Stage ──────────────────────────────────────────────────
 
 class OutreachDraft(BaseModel):

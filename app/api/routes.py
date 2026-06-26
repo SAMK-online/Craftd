@@ -29,6 +29,7 @@ from app.models.pipeline import (
 )
 from app.services.research_service import enrich_contact
 from app.services.discovery_service import find_people
+from app.services.events_service import find_events
 from app.services.jobs_service import find_jobs_at_company
 from app.services.ocr_service import parse_business_card
 from app.services.persona_service import parse_resume
@@ -288,6 +289,21 @@ async def find_contacts(query: str = Form(...), count: int = Form(5)):
     """
     contacts = await find_people(query=query, count=count)
     return {"query": query, "count": len(contacts), "contacts": [c.model_dump() for c in contacts]}
+
+
+@router.post("/events", response_model=None)
+async def find_events_endpoint(
+    vertical: str = Form(...),
+    location: str | None = Form(None),
+    count: int = Form(6),
+):
+    """Discover upcoming events in a vertical via Exa Search.
+
+    Returns a list of events; each event's URL feeds /api/find to surface the
+    speakers/organizers, which then run through /generate.
+    """
+    events = await find_events(vertical=vertical, location=location, count=count)
+    return {"vertical": vertical, "count": len(events), "events": [e.model_dump() for e in events]}
 
 
 # ─── Async run queue (event-mode dashboard) ───────────────────────────────────
